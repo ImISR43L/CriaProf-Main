@@ -16,7 +16,6 @@ export default function TemplatesPage() {
   const supabase = createClient();
 
   useEffect(() => {
-    // A lógica de useEffect permanece a mesma
     const fetchTemplates = async () => {
       setLoading(true);
       const { data, error } = await supabase

@@ -267,3 +267,27 @@ CREATE OR REPLACE TRIGGER on_auth_user_created
   FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
 
 -- ========= FIM DO SCRIPT DE CORREÇÃO =========
+CREATE OR REPLACE FUNCTION get_public_quizzes()
+RETURNS TABLE (
+  id uuid,
+  title text,
+  created_at timestamptz,
+  author_name text
+) AS $$
+BEGIN
+  RETURN QUERY
+    SELECT
+      q.id,
+      q.title,
+      q.created_at,
+      p.full_name as author_name
+    FROM
+      public.quizzes as q
+    LEFT JOIN
+      public.profiles as p ON q.user_id = p.id
+    WHERE
+      q.is_public = true
+    ORDER BY
+      q.created_at DESC;
+END;
+$$ LANGUAGE plpgsql;

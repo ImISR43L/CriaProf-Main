@@ -6,6 +6,7 @@ import ControlPanel from "@/components/ControlPanel";
 import InteractiveGrid from "@/components/InteractiveGrid";
 import ActionsPanel from "@/components/ActionsPanel";
 import { useSupabase } from "@/components/AuthProvider";
+import Spinner from "@/components/Spinner";
 
 export interface Question {
   id: number;
@@ -33,7 +34,7 @@ const GridSizeSelector = ({
   const sizes = [10, 15, 20];
   return (
     <div className="mb-2">
-      <label className="block text-sm font-medium text-gray-700 mb-2">
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
         Tamanho da Grade
       </label>
       <div className="flex gap-2">
@@ -45,8 +46,8 @@ const GridSizeSelector = ({
             className={`px-4 py-2 rounded-md text-sm font-semibold border ${
               selectedSize === size
                 ? "bg-blue-600 text-white border-blue-600"
-                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-            } disabled:bg-gray-200 disabled:cursor-not-allowed`}
+                : "bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-slate-600"
+            } disabled:bg-gray-200 dark:disabled:bg-slate-800 disabled:cursor-not-allowed`}
           >
             {size}x{size}
           </button>
@@ -199,23 +200,17 @@ function HomePageContent() {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
+    return <Spinner />;
   }
 
   return (
-    <main className="container mx-auto p-4 sm:p-6 lg:p-8 bg-gray-50 min-h-screen">
+    <div className="container mx-auto p-4 sm:p-6 lg:p-8">
       <header className="text-center mb-8">
-        <h1 className="text-3xl sm:text-4xl font-bold text-gray-800">
+        <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-gray-100">
           Gerador de Atividades "Pinte por Número"
         </h1>
       </header>
-      {/* --- CORREÇÃO APLICADA AQUI --- */}
-      {/* Removemos o 'items-start' do container principal */}
-      <div className="grid grid-cols-1 lg:grid-cols-[350px_1fr_300px] gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-[350px_1fr_300px] gap-6 items-start">
         <div>
           <ControlPanel
             title={title}
@@ -223,21 +218,20 @@ function HomePageContent() {
             colorGroups={colorGroups}
             setColorGroups={setColorGroups}
           />
-          <div className="bg-white p-5 rounded-lg shadow-md h-fit mt-6">
+          <div className="bg-white dark:bg-slate-800 p-5 rounded-lg shadow-md h-fit mt-6 border border-gray-200 dark:border-gray-700">
             <GridSizeSelector
               selectedSize={gridSize}
               onChange={handleGridSizeChange}
               disabled={isQuizLoaded}
             />
             {isQuizLoaded && (
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
                 O tamanho da grade não pode ser alterado em um questionário
                 salvo.
               </p>
             )}
           </div>
         </div>
-        {/* Adicionamos um wrapper com 'self-start' para a grade não esticar */}
         <div className="self-start">
           <InteractiveGrid
             gridState={gridState}
@@ -253,7 +247,7 @@ function HomePageContent() {
           gridSize={gridSize}
         />
       </div>
-    </main>
+    </div>
   );
 }
 

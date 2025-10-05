@@ -35,15 +35,17 @@ const ColorBlock = ({
   };
 
   return (
-    <div className="border border-gray-200 rounded-lg p-4 mb-4 relative">
-      <div className="flex items-center gap-3 pb-3 mb-3 border-b border-gray-200">
+    <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 mb-4 relative">
+      <div className="flex items-center gap-3 pb-3 mb-3 border-b border-gray-200 dark:border-gray-700">
         <input
           type="color"
           value={group.color}
           onChange={handleColorChange}
-          className="w-10 h-10 p-0 border-none cursor-pointer"
+          className="w-10 h-10 p-0 border-none cursor-pointer bg-transparent"
         />
-        <h3 className="font-bold text-lg">Cor {colorNumber}</h3>
+        <h3 className="font-bold text-lg text-gray-900 dark:text-gray-100">
+          Cor {colorNumber}
+        </h3>
         {canBeRemoved && (
           <button
             onClick={() => onRemove(group.id)}
@@ -54,12 +56,11 @@ const ColorBlock = ({
           </button>
         )}
       </div>
-
       <div className="space-y-3">
         {group.questions.map((q, index) => (
           <div key={q.id}>
             <div className="flex items-center gap-2 mb-1">
-              <span className="font-bold text-gray-500 text-sm">
+              <span className="font-bold text-gray-500 dark:text-gray-400 text-sm">
                 ({baseReferenceNumber + index})
               </span>
               <input
@@ -69,18 +70,18 @@ const ColorBlock = ({
                 onChange={(e) =>
                   handleQuestionChange(q.id, "text", e.target.value)
                 }
-                className="flex-grow p-2 border border-gray-300 rounded-md text-sm"
+                className="flex-grow p-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
             <input
               type="text"
-              placeholder="Resposta (agora aceita textos longos)"
+              placeholder="Resposta"
               value={q.answer}
               onChange={(e) =>
                 handleQuestionChange(q.id, "answer", e.target.value)
               }
               maxLength={50}
-              className="w-full p-2 border border-gray-300 rounded-md text-sm"
+              className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
         ))}

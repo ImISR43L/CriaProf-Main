@@ -3,13 +3,13 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSupabase } from "@/components/AuthProvider";
 import { useRouter } from "next/navigation";
-import Spinner from "@/components/Spinner";
+import Spinner from "@/components/Spinner"; // Importar o Spinner
 
 interface Quiz {
   id: string;
   title: string;
   created_at: string;
-  is_public: boolean; // Adicionamos o status de compartilhamento
+  is_public: boolean;
 }
 
 export default function DashboardPage() {
@@ -22,26 +22,25 @@ export default function DashboardPage() {
     if (!user) {
       const timer = setTimeout(() => {
         if (!user) router.push("/login");
-      }, 100);
+      }, 500); // Aumentar um pouco o tempo para dar margem para o user ser carregado
       return () => clearTimeout(timer);
+    } else {
+      const fetchQuizzes = async () => {
+        setLoading(true);
+        const { data, error } = await supabase
+          .from("quizzes")
+          .select("id, title, created_at, is_public")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false });
+
+        if (data) {
+          setQuizzes(data);
+        }
+        setLoading(false);
+      };
+
+      fetchQuizzes();
     }
-
-    const fetchQuizzes = async () => {
-      setLoading(true);
-      // Agora selecionamos também a coluna 'is_public'
-      const { data, error } = await supabase
-        .from("quizzes")
-        .select("id, title, created_at, is_public")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-
-      if (data) {
-        setQuizzes(data);
-      }
-      setLoading(false);
-    };
-
-    fetchQuizzes();
   }, [user, supabase, router]);
 
   const toggleShareQuiz = async (quizId: string, currentStatus: boolean) => {
@@ -54,7 +53,6 @@ export default function DashboardPage() {
       .single();
 
     if (data) {
-      // Atualiza o estado local para refletir a mudança sem recarregar a página
       setQuizzes(
         quizzes.map((q) =>
           q.id === quizId ? { ...q, is_public: newStatus } : q
@@ -66,7 +64,6 @@ export default function DashboardPage() {
   };
 
   const getShareLink = (quizId: string) => {
-    // Retorna a URL completa para o quiz
     return `${window.location.origin}/?quiz_id=${quizId}`;
   };
 
@@ -84,12 +81,12 @@ export default function DashboardPage() {
       if (error) {
         alert(`Erro ao apagar o questionário: ${error.message}`);
       } else {
-        // Remove o quiz da lista na interface sem precisar recarregar a página
         setQuizzes(quizzes.filter((q) => q.id !== quizId));
       }
     }
   };
 
+  // Usar o Spinner em vez do texto "Carregando..."
   if (loading) {
     return <Spinner />;
   }
@@ -111,7 +108,7 @@ export default function DashboardPage() {
           <ul>
             {quizzes.map((quiz) => (
               <li key={quiz.id} className="border-b last:border-b-0 py-4">
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center flex-wrap gap-4">
                   <div>
                     <h2 className="font-bold text-lg">{quiz.title}</h2>
                     <p className="text-sm text-gray-500">
@@ -119,19 +116,19 @@ export default function DashboardPage() {
                       {new Date(quiz.created_at).toLocaleDateString("pt-BR")}
                     </p>
                   </div>
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2 sm:gap-4">
                     <Link
                       href={`/?quiz_id=${quiz.id}`}
-                      className="text-blue-600 font-semibold hover:underline"
+                      className="text-blue-600 font-semibold hover:underline px-2"
                     >
                       Abrir
                     </Link>
                     <button
                       onClick={() => toggleShareQuiz(quiz.id, quiz.is_public)}
-                      className={`py-2 px-4 text-sm rounded-md ${
+                      className={`py-2 px-4 text-sm rounded-md transition-colors ${
                         quiz.is_public
-                          ? "bg-gray-200 text-gray-800"
-                          : "bg-green-500 text-white"
+                          ? "bg-gray-200 text-gray-800 hover:bg-gray-300"
+                          : "bg-green-500 text-white hover:bg-green-600"
                       }`}
                     >
                       {quiz.is_public ? "Tornar Privado" : "Publicar"}

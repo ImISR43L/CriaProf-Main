@@ -4,17 +4,13 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import Spinner from "@/components/Spinner";
 
-// --- ALTERAÇÃO NA INTERFACE ---
-// A propriedade 'profiles' agora é um array de objetos, para corresponder ao retorno do Supabase.
+// --- INTERFACE ATUALIZADA ---
+// A estrutura agora é "plana", correspondendo ao retorno da nossa função SQL.
 interface PublicQuiz {
   id: string;
   title: string;
   created_at: string;
-  profiles:
-    | {
-        full_name: string | null;
-      }[]
-    | null; // <-- A alteração está aqui: []
+  author_name: string | null;
 }
 
 export default function CommunityPage() {
@@ -25,18 +21,16 @@ export default function CommunityPage() {
   useEffect(() => {
     const fetchPublicQuizzes = async () => {
       setLoading(true);
-      const { data, error } = await supabase
-        .from("quizzes")
-        .select("id, title, created_at, profiles(full_name)")
-        .eq("is_public", true)
-        .order("created_at", { ascending: false });
+
+      // --- CHAMADA À API MODIFICADA ---
+      // Em vez de .from('quizzes').select(...), chamamos nossa função RPC.
+      const { data, error } = await supabase.rpc("get_public_quizzes");
 
       if (data) {
         setQuizzes(data as PublicQuiz[]);
       } else {
-        // Se houver um erro, podemos logá-lo para depuração
         if (error) {
-          console.error("Erro ao buscar quizzes públicos:", error);
+          console.error("Erro ao buscar quizzes públicos via RPC:", error);
         }
       }
       setLoading(false);
@@ -67,9 +61,9 @@ export default function CommunityPage() {
             >
               <h2 className="font-bold text-xl mb-2">{quiz.title}</h2>
               <p className="text-sm text-gray-500 mb-4">
-                {/* --- ALTERAÇÃO NO JSX --- */}
-                {/* Acessamos o primeiro item ([0]) do array de perfis */}
-                Criado por: {quiz.profiles?.[0]?.full_name || "Anônimo"}
+                {/* --- JSX ATUALIZADO --- */}
+                {/* Usamos a nova propriedade 'author_name' */}
+                Criado por: {quiz.author_name || "Anônimo"}
               </p>
               <Link
                 href={`/?quiz_id=${quiz.id}`}

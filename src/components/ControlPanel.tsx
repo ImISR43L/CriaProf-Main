@@ -47,12 +47,14 @@ const ControlPanel = ({
   };
 
   return (
-    <aside className="bg-white p-5 rounded-lg shadow-md h-fit">
-      <h2 className="text-xl font-bold mb-4">Painel de Perguntas</h2>
+    <aside className="bg-white dark:bg-slate-800 p-5 rounded-lg shadow-md h-fit border border-gray-200 dark:border-gray-700">
+      <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+        Painel de Perguntas
+      </h2>
       <div className="mb-6">
         <label
           htmlFor="title"
-          className="block text-sm font-medium text-gray-700 mb-1"
+          className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
         >
           Título da Atividade
         </label>
@@ -62,7 +64,7 @@ const ControlPanel = ({
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Ex: Revisão de Matemática"
-          className="w-full p-2 border border-gray-300 rounded-md"
+          className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:ring-blue-500 focus:border-blue-500"
         />
       </div>
 
@@ -85,7 +87,7 @@ const ControlPanel = ({
 
       <button
         onClick={handleAddColor}
-        className="w-full mt-2 p-2 border-2 border-dashed border-gray-300 rounded-md text-gray-500 hover:bg-gray-100"
+        className="w-full mt-2 p-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
       >
         + Adicionar Cor
       </button>
