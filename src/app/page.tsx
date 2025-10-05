@@ -13,19 +13,17 @@ export interface Question {
   text: string;
   answer: string;
 }
-
 export interface ColorGroup {
   id: number;
   color: string;
   questions: Question[];
 }
-
-// --- Componente de Seleção de Tamanho ---
 interface GridSizeSelectorProps {
   selectedSize: number;
   onChange: (size: number) => void;
   disabled: boolean;
 }
+
 const GridSizeSelector = ({
   selectedSize,
   onChange,
@@ -43,7 +41,7 @@ const GridSizeSelector = ({
             key={size}
             onClick={() => onChange(size)}
             disabled={disabled}
-            className={`px-4 py-2 rounded-md text-sm font-semibold border ${
+            className={`px-4 py-2 rounded-md text-sm font-semibold border transition-colors ${
               selectedSize === size
                 ? "bg-blue-600 text-white border-blue-600"
                 : "bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-slate-600"
@@ -63,7 +61,7 @@ function HomePageContent() {
   const [title, setTitle] = useState("");
   const [colorGroups, setColorGroups] = useState<ColorGroup[]>([]);
   const [gridSize, setGridSize] = useState(15);
-  const [gridState, setGridState] = useState<string[]>(Array(15 * 15).fill(""));
+  const [gridState, setGridState] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isQuizLoaded, setIsQuizLoaded] = useState(false);
 
@@ -80,6 +78,7 @@ function HomePageContent() {
         )
         .eq("id", id)
         .single();
+
       if (data) {
         const loadedSize = data.grid_size || 15;
         setTitle(data.title);
@@ -161,7 +160,9 @@ function HomePageContent() {
     } else if (templateId) {
       fetchTemplateData(templateId);
     } else {
-      setGridState(Array(gridSize * gridSize).fill(""));
+      setIsLoading(false);
+      setIsQuizLoaded(false);
+      setTitle("");
       setColorGroups([
         {
           id: Date.now(),
@@ -171,30 +172,26 @@ function HomePageContent() {
             .map((_, i) => ({ id: i + 1, text: "", answer: "" })),
         },
       ]);
-      setIsLoading(false);
     }
-  }, [searchParams, supabase, gridSize]);
+  }, [searchParams, supabase]);
+
+  useEffect(() => {
+    setGridState(Array(gridSize * gridSize).fill(""));
+  }, [gridSize]);
 
   const handleGridSizeChange = (newSize: number) => {
     if (!isQuizLoaded) {
       setGridSize(newSize);
     }
   };
-
   const handleGridChange = (index: number, value: string) => {
     const numericValue = value.replace(/[^0-9]/g, "");
     const newGridState = [...gridState];
     newGridState[index] = numericValue;
     setGridState(newGridState);
   };
-
   const handleClearGrid = () => {
-    // Adiciona a confirmação do navegador
-    if (
-      window.confirm(
-        "Tem certeza de que deseja limpar a grade? Todo o preenchimento será perdido."
-      )
-    ) {
+    if (window.confirm("Tem certeza?")) {
       setGridState(Array(gridSize * gridSize).fill(""));
     }
   };
@@ -210,7 +207,7 @@ function HomePageContent() {
           Gerador de Atividades "Pinte por Número"
         </h1>
       </header>
-      <div className="grid grid-cols-1 lg:grid-cols-[350px_1fr_300px] gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr] xl:grid-cols-[380px_1fr_320px] gap-6 items-start">
         <div>
           <ControlPanel
             title={title}
@@ -226,8 +223,7 @@ function HomePageContent() {
             />
             {isQuizLoaded && (
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                O tamanho da grade não pode ser alterado em um questionário
-                salvo.
+                O tamanho da grade não pode ser alterado num questionário salvo.
               </p>
             )}
           </div>
@@ -253,9 +249,7 @@ function HomePageContent() {
 
 export default function HomePage() {
   return (
-    <Suspense
-      fallback={<div className="text-center p-10">Carregando Aplicação...</div>}
-    >
+    <Suspense fallback={<Spinner />}>
       <HomePageContent />
     </Suspense>
   );

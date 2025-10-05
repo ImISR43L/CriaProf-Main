@@ -84,16 +84,18 @@ const ActionsPanel = ({
   };
 
   return (
-    <aside className="bg-white p-5 rounded-lg shadow-md h-fit">
-      <h2 className="text-xl font-bold mb-4">Ações</h2>
+    <aside className="bg-white dark:bg-slate-800 p-5 rounded-lg shadow-md h-fit border border-gray-200 dark:border-gray-700">
+      <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+        Ações
+      </h2>
       <div className="space-y-3">
         {user && (
           <button
             onClick={handleSaveQuiz}
             disabled={isSaving}
-            className="w-full bg-blue-600 text-white font-bold py-3 rounded-md hover:bg-blue-700 transition-colors disabled:bg-blue-300"
+            className="w-full bg-blue-600 text-white font-bold py-3 rounded-md hover:bg-blue-700 transition-colors disabled:bg-blue-400 dark:disabled:bg-blue-800"
           >
-            {isSaving ? "Salvando..." : "Salvar Questionário"}
+            {isSaving ? "A Salvar..." : "Salvar Questionário"}
           </button>
         )}
         <button
@@ -109,7 +111,9 @@ const ActionsPanel = ({
           Limpar Grade
         </button>
         {message && (
-          <p className="text-sm text-center text-green-600">{message}</p>
+          <p className="text-sm text-center text-green-600 dark:text-green-400 mt-2">
+            {message}
+          </p>
         )}
       </div>
     </aside>

@@ -14,29 +14,31 @@ export default function AuthButton() {
     router.refresh();
   };
 
+  // Enquanto o 'user' é 'undefined', significa que a autenticação ainda está a ser verificada
   if (user === undefined) {
-    return null;
+    return (
+      <div className="w-48 h-8 animate-pulse bg-gray-200 dark:bg-gray-700 rounded-md"></div>
+    );
   }
 
   return user ? (
     <div className="flex items-center gap-4">
       <Link
         href="/dashboard"
-        className="text-sm font-medium text-gray-600 hover:text-blue-600"
+        className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
       >
         Meus Questionários
       </Link>
-      {/* --- LINK ADICIONADO AQUI --- */}
       <Link
         href="/account"
-        className="text-sm font-medium text-gray-600 hover:text-blue-600"
+        className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
         title="Minha Conta"
       >
         Olá, {user.email?.split("@")[0]}
       </Link>
       <button
         onClick={handleSignOut}
-        className="py-2 px-3 text-sm bg-red-500 text-white rounded-md hover:bg-red-600"
+        className="py-2 px-3 text-sm bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
       >
         Sair
       </button>
@@ -44,7 +46,7 @@ export default function AuthButton() {
   ) : (
     <Link
       href="/login"
-      className="py-2 px-4 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
+      className="py-2 px-4 text-sm bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 transition-colors"
     >
       Login / Cadastrar
     </Link>

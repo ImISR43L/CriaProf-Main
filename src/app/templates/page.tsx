@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import Spinner from "@/components/Spinner"; // Importar o Spinner
+import Spinner from "@/components/Spinner";
 
 interface Template {
   id: string;
@@ -22,26 +22,21 @@ export default function TemplatesPage() {
         .from("templates")
         .select("id, title, description")
         .order("created_at", { ascending: false });
-
-      if (data) {
-        setTemplates(data);
-      }
+      if (data) setTemplates(data);
       setLoading(false);
     };
-
     fetchTemplates();
   }, [supabase]);
 
-  // Usar o Spinner em vez do texto "Carregando templates..."
-  if (loading) {
-    return <Spinner />;
-  }
+  if (loading) return <Spinner />;
 
   return (
     <div className="container mx-auto p-8">
       <div className="text-center mb-10">
-        <h1 className="text-4xl font-bold">Galeria de Templates</h1>
-        <p className="text-lg text-gray-600 mt-2">
+        <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100">
+          Galeria de Templates
+        </h1>
+        <p className="text-lg text-gray-600 dark:text-gray-400 mt-2">
           Escolha um modelo abaixo para começar rapidamente!
         </p>
       </div>
@@ -51,15 +46,17 @@ export default function TemplatesPage() {
           {templates.map((template) => (
             <div
               key={template.id}
-              className="bg-white border rounded-lg shadow-md p-6 flex flex-col"
+              className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-md p-6 flex flex-col"
             >
-              <h2 className="font-bold text-xl mb-2">{template.title}</h2>
-              <p className="text-gray-600 flex-grow mb-4">
+              <h2 className="font-bold text-xl text-gray-900 dark:text-gray-100 mb-2">
+                {template.title}
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400 flex-grow mb-4">
                 {template.description}
               </p>
               <Link
                 href={`/?template_id=${template.id}`}
-                className="mt-auto text-center w-full py-2 px-4 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700"
+                className="mt-auto text-center w-full py-2 px-4 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 transition-colors"
               >
                 Usar este Template
               </Link>
@@ -67,7 +64,7 @@ export default function TemplatesPage() {
           ))}
         </div>
       ) : (
-        <p className="text-center text-gray-500 mt-10">
+        <p className="text-center text-gray-500 dark:text-gray-400 mt-10">
           Nenhum template encontrado.
         </p>
       )}
