@@ -16,17 +16,19 @@ const ControlPanel = ({
   colorGroups,
   setColorGroups,
 }: ControlPanelProps) => {
+  let questionCounter = 0;
+
+  // --- FUNÇÃO MODIFICADA ---
   const handleAddColor = () => {
-    if (colorGroups.length < 4) {
-      const newColorGroup: ColorGroup = {
-        id: Date.now(),
-        color: "#E9ECEF",
-        questions: Array(4)
-          .fill(null)
-          .map((_, i) => ({ id: i + 1, text: "", answer: "" })),
-      };
-      setColorGroups([...colorGroups, newColorGroup]);
-    }
+    // A verificação de limite foi removida, permitindo adicionar cores indefinidamente.
+    const newColorGroup: ColorGroup = {
+      id: Date.now(),
+      color: "#E9ECEF", // Uma cor padrão para o novo bloco
+      questions: Array(4)
+        .fill(null)
+        .map((_, i) => ({ id: i + 1, text: "", answer: "" })),
+    };
+    setColorGroups([...colorGroups, newColorGroup]);
   };
 
   const handleColorGroupChange = (updatedGroup: ColorGroup) => {
@@ -38,6 +40,7 @@ const ControlPanel = ({
   };
 
   const handleRemoveColor = (id: number) => {
+    // A lógica para não remover o último bloco de cor permanece
     if (colorGroups.length > 1) {
       setColorGroups(colorGroups.filter((group) => group.id !== id));
     }
@@ -63,25 +66,29 @@ const ControlPanel = ({
         />
       </div>
 
-      {colorGroups.map((group, index) => (
-        <ColorBlock
-          key={group.id}
-          group={group}
-          onChange={handleColorGroupChange}
-          onRemove={handleRemoveColor}
-          canBeRemoved={colorGroups.length > 1}
-          colorNumber={index + 1}
-        />
-      ))}
+      {colorGroups.map((group, index) => {
+        const baseReferenceNumber = questionCounter + 1;
+        questionCounter += group.questions.length;
 
-      {colorGroups.length < 4 && (
-        <button
-          onClick={handleAddColor}
-          className="w-full mt-2 p-2 border-2 border-dashed border-gray-300 rounded-md text-gray-500 hover:bg-gray-100"
-        >
-          + Adicionar Cor
-        </button>
-      )}
+        return (
+          <ColorBlock
+            key={group.id}
+            group={group}
+            onChange={handleColorGroupChange}
+            onRemove={handleRemoveColor}
+            canBeRemoved={colorGroups.length > 1}
+            colorNumber={index + 1}
+            baseReferenceNumber={baseReferenceNumber}
+          />
+        );
+      })}
+
+      <button
+        onClick={handleAddColor}
+        className="w-full mt-2 p-2 border-2 border-dashed border-gray-300 rounded-md text-gray-500 hover:bg-gray-100"
+      >
+        + Adicionar Cor
+      </button>
     </aside>
   );
 };

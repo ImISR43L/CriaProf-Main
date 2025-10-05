@@ -1,15 +1,12 @@
 // src/app/page.tsx
 "use client";
-
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import ControlPanel from "@/components/ControlPanel";
 import InteractiveGrid from "@/components/InteractiveGrid";
 import ActionsPanel from "@/components/ActionsPanel";
-import AuthButton from "@/components/AuthButton"; // Importe o novo botão
 import { useSupabase } from "@/components/AuthProvider";
 
-// --- Tipos ---
 export interface Question {
   id: number;
   text: string;
@@ -22,51 +19,73 @@ export interface ColorGroup {
   questions: Question[];
 }
 
-// --- Componente Principal ---
+// --- Componente de Seleção de Tamanho ---
+interface GridSizeSelectorProps {
+  selectedSize: number;
+  onChange: (size: number) => void;
+  disabled: boolean;
+}
+const GridSizeSelector = ({
+  selectedSize,
+  onChange,
+  disabled,
+}: GridSizeSelectorProps) => {
+  const sizes = [10, 15, 20];
+  return (
+    <div className="mb-2">
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        Tamanho da Grade
+      </label>
+      <div className="flex gap-2">
+        {sizes.map((size) => (
+          <button
+            key={size}
+            onClick={() => onChange(size)}
+            disabled={disabled}
+            className={`px-4 py-2 rounded-md text-sm font-semibold border ${
+              selectedSize === size
+                ? "bg-blue-600 text-white border-blue-600"
+                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+            } disabled:bg-gray-200 disabled:cursor-not-allowed`}
+          >
+            {size}x{size}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 function HomePageContent() {
   const { supabase } = useSupabase();
   const searchParams = useSearchParams();
-  const [title, setTitle] = useState("Revisão de Matemática");
-  const [colorGroups, setColorGroups] = useState<ColorGroup[]>([
-    {
-      id: Date.now(),
-      color: "#FFC107",
-      questions: [
-        { id: 1, text: "2 x 2", answer: "4" },
-        { id: 2, text: "5 x 5", answer: "25" },
-        { id: 3, text: "", answer: "" },
-        { id: 4, text: "", answer: "" },
-      ],
-    },
-    {
-      id: Date.now() + 1,
-      color: "#007BFF",
-      questions: [
-        { id: 1, text: "10 + 5", answer: "15" },
-        { id: 2, text: "20 + 8", answer: "28" },
-        { id: 3, text: "", answer: "" },
-        { id: 4, text: "", answer: "" },
-      ],
-    },
-  ]);
-  const [gridState, setGridState] = useState<string[]>(Array(225).fill(""));
+  const [title, setTitle] = useState("");
+  const [colorGroups, setColorGroups] = useState<ColorGroup[]>([]);
+  const [gridSize, setGridSize] = useState(15);
+  const [gridState, setGridState] = useState<string[]>(Array(15 * 15).fill(""));
   const [isLoading, setIsLoading] = useState(true);
+  const [isQuizLoaded, setIsQuizLoaded] = useState(false);
 
   useEffect(() => {
     const quizId = searchParams.get("quiz_id");
+    const templateId = searchParams.get("template_id");
 
     const fetchQuizData = async (id: string) => {
+      setIsLoading(true);
       const { data, error } = await supabase
         .from("quizzes")
-        .select("title, grid_data, questions ( color, question_text, answer )")
+        .select(
+          "title, grid_data, grid_size, questions ( color, question_text, answer )"
+        )
         .eq("id", id)
         .single();
-
       if (data) {
+        const loadedSize = data.grid_size || 15;
         setTitle(data.title);
-        setGridState(data.grid_data || Array(225).fill(""));
+        setGridSize(loadedSize);
+        setGridState(data.grid_data || Array(loadedSize * loadedSize).fill(""));
+        setIsQuizLoaded(true);
 
-        // Reorganiza as perguntas de volta para a estrutura de colorGroups
         const groups: { [key: string]: Question[] } = {};
         data.questions.forEach((q: any) => {
           if (!groups[q.color]) groups[q.color] = [];
@@ -76,11 +95,9 @@ function HomePageContent() {
             answer: q.answer,
           });
         });
-
         const loadedColorGroups = Object.entries(groups).map(
           ([color, questions], index) => {
             while (questions.length < 4) {
-              // Garante que sempre haja 4 campos
               questions.push({
                 id: questions.length + 1,
                 text: "",
@@ -90,7 +107,49 @@ function HomePageContent() {
             return { id: Date.now() + index, color, questions };
           }
         );
+        setColorGroups(loadedColorGroups);
+      }
+      setIsLoading(false);
+    };
 
+    const fetchTemplateData = async (id: string) => {
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from("templates")
+        .select(
+          "title, grid_size, template_questions ( color, question_text, answer )"
+        )
+        .eq("id", id)
+        .single();
+
+      if (data) {
+        const loadedSize = data.grid_size || 15;
+        setTitle(data.title);
+        setGridSize(loadedSize);
+        setGridState(Array(loadedSize * loadedSize).fill(""));
+        setIsQuizLoaded(false);
+
+        const groups: { [key: string]: Question[] } = {};
+        data.template_questions.forEach((q: any) => {
+          if (!groups[q.color]) groups[q.color] = [];
+          groups[q.color].push({
+            id: groups[q.color].length + 1,
+            text: q.question_text,
+            answer: q.answer,
+          });
+        });
+        const loadedColorGroups = Object.entries(groups).map(
+          ([color, questions], index) => {
+            while (questions.length < 4) {
+              questions.push({
+                id: questions.length + 1,
+                text: "",
+                answer: "",
+              });
+            }
+            return { id: Date.now() + index, color, questions };
+          }
+        );
         setColorGroups(loadedColorGroups);
       }
       setIsLoading(false);
@@ -98,8 +157,10 @@ function HomePageContent() {
 
     if (quizId) {
       fetchQuizData(quizId);
+    } else if (templateId) {
+      fetchTemplateData(templateId);
     } else {
-      // Estado inicial para um novo quiz
+      setGridState(Array(gridSize * gridSize).fill(""));
       setColorGroups([
         {
           id: Date.now(),
@@ -111,51 +172,85 @@ function HomePageContent() {
       ]);
       setIsLoading(false);
     }
-  }, [searchParams, supabase]);
+  }, [searchParams, supabase, gridSize]);
 
-  if (isLoading) {
-    return <div className="text-center p-10">Carregando...</div>;
-  }
+  const handleGridSizeChange = (newSize: number) => {
+    if (!isQuizLoaded) {
+      setGridSize(newSize);
+    }
+  };
 
   const handleGridChange = (index: number, value: string) => {
-    const numericValue = value.replace(/[^0-9]/g, "").slice(0, 3);
+    const numericValue = value.replace(/[^0-9]/g, "");
     const newGridState = [...gridState];
     newGridState[index] = numericValue;
     setGridState(newGridState);
   };
 
   const handleClearGrid = () => {
-    setGridState(Array(225).fill(""));
+    // Adiciona a confirmação do navegador
+    if (
+      window.confirm(
+        "Tem certeza de que deseja limpar a grade? Todo o preenchimento será perdido."
+      )
+    ) {
+      setGridState(Array(gridSize * gridSize).fill(""));
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
     <main className="container mx-auto p-4 sm:p-6 lg:p-8 bg-gray-50 min-h-screen">
-      {/* Adicione o botão aqui */}
-      <div className="flex justify-end mb-4">
-        <AuthButton />
-      </div>
       <header className="text-center mb-8">
         <h1 className="text-3xl sm:text-4xl font-bold text-gray-800">
-          Gerador de Atividades &quot;Pinte por Número&quot;
+          Gerador de Atividades "Pinte por Número"
         </h1>
       </header>
-      {/* --- LINHA CORRIGIDA ABAIXO --- */}
-      <div className="grid grid-cols-1 lg:grid-cols-[350px_1fr_300px] gap-6 items-start">
-        <ControlPanel
-          title={title}
-          setTitle={setTitle}
-          colorGroups={colorGroups}
-          setColorGroups={setColorGroups}
-        />
-        <InteractiveGrid
-          gridState={gridState}
-          onCellChange={handleGridChange}
-        />
+      {/* --- CORREÇÃO APLICADA AQUI --- */}
+      {/* Removemos o 'items-start' do container principal */}
+      <div className="grid grid-cols-1 lg:grid-cols-[350px_1fr_300px] gap-6">
+        <div>
+          <ControlPanel
+            title={title}
+            setTitle={setTitle}
+            colorGroups={colorGroups}
+            setColorGroups={setColorGroups}
+          />
+          <div className="bg-white p-5 rounded-lg shadow-md h-fit mt-6">
+            <GridSizeSelector
+              selectedSize={gridSize}
+              onChange={handleGridSizeChange}
+              disabled={isQuizLoaded}
+            />
+            {isQuizLoaded && (
+              <p className="text-xs text-gray-500">
+                O tamanho da grade não pode ser alterado em um questionário
+                salvo.
+              </p>
+            )}
+          </div>
+        </div>
+        {/* Adicionamos um wrapper com 'self-start' para a grade não esticar */}
+        <div className="self-start">
+          <InteractiveGrid
+            gridState={gridState}
+            gridSize={gridSize}
+            onCellChange={handleGridChange}
+          />
+        </div>
         <ActionsPanel
           onClearGrid={handleClearGrid}
           activityTitle={title}
           colorGroups={colorGroups}
           gridState={gridState}
+          gridSize={gridSize}
         />
       </div>
     </main>
@@ -164,7 +259,9 @@ function HomePageContent() {
 
 export default function HomePage() {
   return (
-    <Suspense fallback={<div>Carregando...</div>}>
+    <Suspense
+      fallback={<div className="text-center p-10">Carregando Aplicação...</div>}
+    >
       <HomePageContent />
     </Suspense>
   );

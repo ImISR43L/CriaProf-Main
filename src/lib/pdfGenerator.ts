@@ -1,51 +1,42 @@
+// src/lib/pdfGenerator.ts
 import jsPDF from "jspdf";
 import { ColorGroup } from "@/app/page";
 
-// Função principal que será chamada pelo nosso componente
 export const generatePdf = (
   activityTitle: string,
   colorGroups: ColorGroup[],
-  gridState: string[]
+  gridState: string[],
+  gridSize: number
 ) => {
-  // 1. Inicializar o documento PDF
-  // 'p' = portrait (retrato), 'mm' = milímetros, 'a4' = tamanho da página
   const doc = new jsPDF("p", "mm", "a4");
-
-  // --- Constantes de Layout ---
   const pageHeight = doc.internal.pageSize.getHeight();
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 15;
-  let currentY = margin; // Variável para controlar a posição vertical no documento
+  let currentY = margin;
 
-  // --- 2. Adicionar o Título da Atividade ---
   doc.setFontSize(22);
   doc.setFont("helvetica", "bold");
-  // 'center' alinha o texto no centro da página
   doc.text(activityTitle, pageWidth / 2, currentY, { align: "center" });
-  currentY += 20; // Aumenta a posição Y para o próximo elemento
+  currentY += 20;
 
-  // --- 3. Desenhar a Grade 15x15 ---
-  const gridSectionYStart = currentY;
-  const gridSize = 120; // Tamanho total da grade em mm
-  const cellSize = gridSize / 15; // Tamanho de cada célula
+  const gridSizeMM = 120;
+  const cellSize = gridSizeMM / gridSize;
 
   doc.setLineWidth(0.2);
-  doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
 
-  for (let row = 0; row < 15; row++) {
-    for (let col = 0; col < 15; col++) {
-      const index = row * 15 + col;
+  for (let row = 0; row < gridSize; row++) {
+    for (let col = 0; col < gridSize; col++) {
+      const index = row * gridSize + col;
       const cellValue = gridState[index] || "";
-
       const x = margin + col * cellSize;
       const y = currentY + row * cellSize;
 
-      // Desenha o retângulo da célula
       doc.rect(x, y, cellSize, cellSize);
 
-      // Se a célula tiver um valor, escreve o número no centro
       if (cellValue) {
+        const fontSize = cellValue.length > 2 ? 8 : 10;
+        doc.setFontSize(fontSize);
         doc.text(cellValue, x + cellSize / 2, y + cellSize / 2, {
           align: "center",
           baseline: "middle",
@@ -54,28 +45,29 @@ export const generatePdf = (
     }
   }
 
-  // --- 4. Desenhar a Legenda de Perguntas ao lado da Grade ---
-  let legendX = margin + gridSize + 10;
-  currentY += 5; // Alinha o início da legenda com a grade
+  let legendX = margin + gridSizeMM + 10;
+  currentY = margin + 20 + 5;
+  let questionRef = 1;
 
   doc.setFontSize(12);
   doc.setFont("helvetica", "bold");
+  if (legendX + 50 > pageWidth) {
+    legendX = margin;
+    currentY = margin + gridSizeMM + 15;
+  }
   doc.text("Legenda:", legendX, currentY - 5);
 
   colorGroups.forEach((group) => {
-    // Verifica se há espaço na página, se não, cria uma nova
-    if (currentY > pageHeight - 30) {
+    if (currentY > pageHeight - 20) {
       doc.addPage();
       currentY = margin;
-      legendX = margin; // Na nova página, a legenda começa na margem esquerda
+      legendX = margin;
     }
 
     doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
-
-    // Desenha um pequeno quadrado com a cor
     doc.setFillColor(group.color);
-    doc.rect(legendX, currentY, 5, 5, "F"); // 'F' = Fill (Preencher)
+    doc.rect(legendX, currentY, 5, 5, "F");
     doc.text(`Cor (${group.color})`, legendX + 7, currentY + 4);
     currentY += 8;
 
@@ -83,16 +75,22 @@ export const generatePdf = (
     doc.setFont("helvetica", "normal");
 
     group.questions.forEach((q) => {
-      // Adiciona apenas perguntas que não estão vazias
       if (q.text && q.answer) {
-        doc.text(`${q.text} = ${q.answer}`, legendX, currentY);
-        currentY += 6;
+        const questionLine = `(${questionRef}) ${q.text} = ${q.answer}`;
+        const splitText = doc.splitTextToSize(
+          questionLine,
+          pageWidth - legendX - margin
+        );
+
+        doc.text(splitText, legendX, currentY);
+        currentY += splitText.length * 4 + 2;
+        questionRef++;
+      } else {
+        questionRef++;
       }
     });
-    currentY += 4; // Espaço entre os grupos de cores
+    currentY += 4;
   });
 
-  // --- 5. Salvar o PDF ---
-  // Isso irá acionar o download do arquivo no navegador
   doc.save(`${activityTitle.replace(/\s+/g, "_") || "atividade"}.pdf`);
 };

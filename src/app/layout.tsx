@@ -1,7 +1,9 @@
+// src/app/layout.tsx
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import AuthProvider from "@/components/AuthProvider"; // Importe
+import AuthProvider from "@/components/AuthProvider";
+import Navbar from "@/components/Navbar"; // Importar a Navbar
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -17,8 +19,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-br">
-      <body className={inter.className}>
-        <AuthProvider>{children}</AuthProvider> {/* Envolva o children */}
+      <body className={`${inter.className} bg-gray-50`}>
+        <AuthProvider>
+          <Navbar /> {/* Adicionar a Navbar aqui */}
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );

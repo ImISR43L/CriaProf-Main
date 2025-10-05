@@ -3,19 +3,33 @@ import React from "react";
 
 interface InteractiveGridProps {
   gridState: string[];
+  gridSize: number;
   onCellChange: (index: number, value: string) => void;
 }
 
-const InteractiveGrid = ({ gridState, onCellChange }: InteractiveGridProps) => {
+const InteractiveGrid = ({
+  gridState,
+  gridSize,
+  onCellChange,
+}: InteractiveGridProps) => {
+  const gridStyles = {
+    gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))`,
+  };
+
   return (
     <section className="bg-white p-5 rounded-lg shadow-md">
-      <h2 className="text-xl font-bold">Grade Interativa (15x15)</h2>
+      <h2 className="text-xl font-bold">
+        Grade Interativa ({gridSize}x{gridSize})
+      </h2>
       <p className="text-gray-500 mb-4 text-sm">
-        Clique em um quadrado e digite o número da resposta correspondente.
+        Clique e digite o{" "}
+        <span className="font-bold">número de referência</span> da pergunta.
       </p>
+      {/* --- CONTAINER DA GRADE MODIFICADO --- */}
+      {/* Removemos gap-px e bg-gray-300. Adicionamos bordas no topo e à esquerda. */}
       <div
-        className="grid grid-cols-15 gap-px bg-gray-300 border border-gray-400"
-        style={{ aspectRatio: "1 / 1" }} // Mantém a grade quadrada
+        className="grid border-t border-l border-gray-400"
+        style={{ ...gridStyles, aspectRatio: "1 / 1" }}
       >
         {gridState.map((cellValue, index) => (
           <input
@@ -23,7 +37,10 @@ const InteractiveGrid = ({ gridState, onCellChange }: InteractiveGridProps) => {
             type="text"
             value={cellValue}
             onChange={(e) => onCellChange(index, e.target.value)}
-            className="w-full h-full bg-white text-center text-sm focus:outline-none focus:bg-blue-100"
+            maxLength={3}
+            // --- CÉLULAS MODIFICADAS ---
+            // Adicionamos bordas na direita e embaixo de cada célula.
+            className="w-full h-full bg-white text-center text-sm p-0 border-r border-b border-gray-400 focus:outline-none focus:bg-blue-100"
           />
         ))}
       </div>
@@ -31,9 +48,4 @@ const InteractiveGrid = ({ gridState, onCellChange }: InteractiveGridProps) => {
   );
 };
 
-// Adicione esta configuração ao seu tailwind.config.ts para a grade funcionar
-// Dentro de theme: { extend: { ... } }
-// gridTemplateColumns: {
-//   '15': 'repeat(15, minmax(0, 1fr))',
-// }
 export default InteractiveGrid;

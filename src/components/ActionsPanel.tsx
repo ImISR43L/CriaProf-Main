@@ -1,3 +1,4 @@
+// src/components/ActionsPanel.tsx
 "use client";
 
 import React, { useState } from "react";
@@ -10,6 +11,7 @@ interface ActionsPanelProps {
   activityTitle: string;
   colorGroups: ColorGroup[];
   gridState: string[];
+  gridSize: number;
 }
 
 const ActionsPanel = ({
@@ -17,13 +19,14 @@ const ActionsPanel = ({
   activityTitle,
   colorGroups,
   gridState,
+  gridSize,
 }: ActionsPanelProps) => {
   const { supabase, user } = useSupabase();
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState("");
 
   const handleGeneratePdf = () => {
-    generatePdf(activityTitle, colorGroups, gridState);
+    generatePdf(activityTitle, colorGroups, gridState, gridSize);
   };
 
   const handleSaveQuiz = async () => {
@@ -35,12 +38,12 @@ const ActionsPanel = ({
     setIsSaving(true);
     setMessage("");
 
-    // 1. Inserir na tabela 'quizzes'
     const { data: quizData, error: quizError } = await supabase
       .from("quizzes")
       .insert({
         title: activityTitle,
         grid_data: gridState,
+        grid_size: gridSize,
         user_id: user.id,
       })
       .select()
@@ -52,10 +55,9 @@ const ActionsPanel = ({
       return;
     }
 
-    // 2. Preparar e inserir as perguntas na tabela 'questions'
     const questionsToInsert = colorGroups.flatMap((group) =>
       group.questions
-        .filter((q) => q.text && q.answer) // Salva apenas perguntas preenchidas
+        .filter((q) => q.text && q.answer)
         .map((q) => ({
           quiz_id: quizData.id,
           color: group.color,
@@ -72,13 +74,13 @@ const ActionsPanel = ({
       if (questionsError) {
         setMessage(`Erro ao salvar perguntas: ${questionsError.message}`);
         setIsSaving(false);
-        return; // Idealmente, aqui você deletaria o quiz criado para evitar inconsistência
+        return;
       }
     }
 
     setMessage("Questionário salvo com sucesso!");
     setIsSaving(false);
-    setTimeout(() => setMessage(""), 3000); // Limpa a mensagem após 3s
+    setTimeout(() => setMessage(""), 3000);
   };
 
   return (

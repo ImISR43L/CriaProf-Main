@@ -13,7 +13,6 @@ const config: Config = {
         // Adiciona a classe grid-cols-15
         "15": "repeat(15, minmax(0, 1fr))",
       },
-      // ... outras extensões
     },
   },
   plugins: [],

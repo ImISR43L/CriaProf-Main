@@ -3,11 +3,13 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSupabase } from "@/components/AuthProvider";
 import { useRouter } from "next/navigation";
+import Spinner from "@/components/Spinner";
 
 interface Quiz {
   id: string;
   title: string;
   created_at: string;
+  is_public: boolean; // Adicionamos o status de compartilhamento
 }
 
 export default function DashboardPage() {
@@ -18,7 +20,6 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!user) {
-      // Se não houver usuário após um breve momento, redirecione para o login
       const timer = setTimeout(() => {
         if (!user) router.push("/login");
       }, 100);
@@ -27,9 +28,10 @@ export default function DashboardPage() {
 
     const fetchQuizzes = async () => {
       setLoading(true);
+      // Agora selecionamos também a coluna 'is_public'
       const { data, error } = await supabase
         .from("quizzes")
-        .select("id, title, created_at")
+        .select("id, title, created_at, is_public")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
@@ -42,8 +44,54 @@ export default function DashboardPage() {
     fetchQuizzes();
   }, [user, supabase, router]);
 
+  const toggleShareQuiz = async (quizId: string, currentStatus: boolean) => {
+    const newStatus = !currentStatus;
+    const { data, error } = await supabase
+      .from("quizzes")
+      .update({ is_public: newStatus })
+      .eq("id", quizId)
+      .select()
+      .single();
+
+    if (data) {
+      // Atualiza o estado local para refletir a mudança sem recarregar a página
+      setQuizzes(
+        quizzes.map((q) =>
+          q.id === quizId ? { ...q, is_public: newStatus } : q
+        )
+      );
+    } else if (error) {
+      alert(`Erro ao alterar o status: ${error.message}`);
+    }
+  };
+
+  const getShareLink = (quizId: string) => {
+    // Retorna a URL completa para o quiz
+    return `${window.location.origin}/?quiz_id=${quizId}`;
+  };
+
+  const handleDeleteQuiz = async (quizId: string) => {
+    if (
+      window.confirm(
+        "Tem certeza que deseja apagar este questionário? Esta ação é irreversível."
+      )
+    ) {
+      const { error } = await supabase
+        .from("quizzes")
+        .delete()
+        .eq("id", quizId);
+
+      if (error) {
+        alert(`Erro ao apagar o questionário: ${error.message}`);
+      } else {
+        // Remove o quiz da lista na interface sem precisar recarregar a página
+        setQuizzes(quizzes.filter((q) => q.id !== quizId));
+      }
+    }
+  };
+
   if (loading) {
-    return <div className="text-center p-10">Carregando...</div>;
+    return <Spinner />;
   }
 
   return (
@@ -62,23 +110,70 @@ export default function DashboardPage() {
         <div className="bg-white p-6 rounded-lg shadow-md">
           <ul>
             {quizzes.map((quiz) => (
-              <li
-                key={quiz.id}
-                className="flex justify-between items-center border-b last:border-b-0 py-3"
-              >
-                <div>
-                  <h2 className="font-bold text-lg">{quiz.title}</h2>
-                  <p className="text-sm text-gray-500">
-                    Criado em:{" "}
-                    {new Date(quiz.created_at).toLocaleDateString("pt-BR")}
-                  </p>
+              <li key={quiz.id} className="border-b last:border-b-0 py-4">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h2 className="font-bold text-lg">{quiz.title}</h2>
+                    <p className="text-sm text-gray-500">
+                      Criado em:{" "}
+                      {new Date(quiz.created_at).toLocaleDateString("pt-BR")}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <Link
+                      href={`/?quiz_id=${quiz.id}`}
+                      className="text-blue-600 font-semibold hover:underline"
+                    >
+                      Abrir
+                    </Link>
+                    <button
+                      onClick={() => toggleShareQuiz(quiz.id, quiz.is_public)}
+                      className={`py-2 px-4 text-sm rounded-md ${
+                        quiz.is_public
+                          ? "bg-gray-200 text-gray-800"
+                          : "bg-green-500 text-white"
+                      }`}
+                    >
+                      {quiz.is_public ? "Tornar Privado" : "Publicar"}
+                    </button>
+                    <button
+                      onClick={() => handleDeleteQuiz(quiz.id)}
+                      className="text-red-500 hover:text-red-700 p-2"
+                      title="Apagar Questionário"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
-                <Link
-                  href={`/?quiz_id=${quiz.id}`}
-                  className="text-blue-600 hover:underline"
-                >
-                  Abrir
-                </Link>
+                {quiz.is_public && (
+                  <div className="mt-3 bg-blue-50 p-3 rounded-md">
+                    <label className="text-sm font-semibold text-blue-800">
+                      Link Público:
+                    </label>
+                    <input
+                      type="text"
+                      readOnly
+                      value={getShareLink(quiz.id)}
+                      onClick={(e) => {
+                        (e.target as HTMLInputElement).select();
+                        navigator.clipboard.writeText(getShareLink(quiz.id));
+                        alert("Link copiado para a área de transferência!");
+                      }}
+                      className="w-full p-1 mt-1 bg-white border border-blue-200 rounded text-sm cursor-pointer"
+                    />
+                  </div>
+                )}
               </li>
             ))}
           </ul>

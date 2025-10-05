@@ -1,6 +1,6 @@
 // src/components/ColorBlock.tsx
 import React from "react";
-import { ColorGroup, Question } from "@/app/page";
+import { ColorGroup } from "@/app/page";
 
 interface ColorBlockProps {
   group: ColorGroup;
@@ -8,6 +8,7 @@ interface ColorBlockProps {
   onRemove: (id: number) => void;
   canBeRemoved: boolean;
   colorNumber: number;
+  baseReferenceNumber: number;
 }
 
 const ColorBlock = ({
@@ -16,6 +17,7 @@ const ColorBlock = ({
   onRemove,
   canBeRemoved,
   colorNumber,
+  baseReferenceNumber,
 }: ColorBlockProps) => {
   const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onChange({ ...group, color: e.target.value });
@@ -53,30 +55,32 @@ const ColorBlock = ({
         )}
       </div>
 
-      <div className="space-y-2">
-        {group.questions.map((q) => (
-          <div key={q.id} className="flex items-center gap-2">
+      <div className="space-y-3">
+        {group.questions.map((q, index) => (
+          <div key={q.id}>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="font-bold text-gray-500 text-sm">
+                ({baseReferenceNumber + index})
+              </span>
+              <input
+                type="text"
+                placeholder={`Pergunta ${index + 1}`}
+                value={q.text}
+                onChange={(e) =>
+                  handleQuestionChange(q.id, "text", e.target.value)
+                }
+                className="flex-grow p-2 border border-gray-300 rounded-md text-sm"
+              />
+            </div>
             <input
               type="text"
-              placeholder={`Pergunta ${q.id}`}
-              value={q.text}
-              onChange={(e) =>
-                handleQuestionChange(q.id, "text", e.target.value)
-              }
-              className="flex-grow p-2 border border-gray-300 rounded-md"
-            />
-            <input
-              type="text" // Usar text para evitar setas de number input e validar manualmente
-              placeholder="Resp."
+              placeholder="Resposta (agora aceita textos longos)"
               value={q.answer}
               onChange={(e) =>
-                handleQuestionChange(
-                  q.id,
-                  "answer",
-                  e.target.value.replace(/[^0-9]/g, "")
-                )
+                handleQuestionChange(q.id, "answer", e.target.value)
               }
-              className="w-20 p-2 border border-gray-300 rounded-md text-center"
+              maxLength={50}
+              className="w-full p-2 border border-gray-300 rounded-md text-sm"
             />
           </div>
         ))}
