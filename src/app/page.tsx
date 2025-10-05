@@ -1,6 +1,6 @@
 // src/app/page.tsx
 "use client";
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import ControlPanel from "@/components/ControlPanel";
 import InteractiveGrid from "@/components/InteractiveGrid";
@@ -16,6 +16,7 @@ export interface Question {
 export interface ColorGroup {
   id: number;
   color: string;
+  name: string;
   questions: Question[];
 }
 interface GridSizeSelectorProps {
@@ -64,6 +65,32 @@ function HomePageContent() {
   const [gridState, setGridState] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isQuizLoaded, setIsQuizLoaded] = useState(false);
+  const [duplicateAnswers, setDuplicateAnswers] = useState<Set<string>>(
+    new Set()
+  );
+
+  const checkForDuplicates = useCallback((groups: ColorGroup[]) => {
+    const answerCounts = new Map<string, number>();
+    groups.forEach((group) => {
+      group.questions.forEach((q) => {
+        if (q.answer.trim() !== "") {
+          answerCounts.set(q.answer, (answerCounts.get(q.answer) || 0) + 1);
+        }
+      });
+    });
+
+    const duplicates = new Set<string>();
+    for (const [answer, count] of answerCounts.entries()) {
+      if (count > 1) {
+        duplicates.add(answer);
+      }
+    }
+    setDuplicateAnswers(duplicates);
+  }, []);
+
+  useEffect(() => {
+    checkForDuplicates(colorGroups);
+  }, [colorGroups, checkForDuplicates]);
 
   useEffect(() => {
     const quizId = searchParams.get("quiz_id");
@@ -87,24 +114,22 @@ function HomePageContent() {
         setIsQuizLoaded(true);
 
         const groups: { [key: string]: Question[] } = {};
-        data.questions.forEach((q: any) => {
+        data.questions.forEach((q: any, i: number) => {
           if (!groups[q.color]) groups[q.color] = [];
           groups[q.color].push({
-            id: groups[q.color].length + 1,
+            id: Date.now() + i, // Use timestamp for unique ID
             text: q.question_text,
             answer: q.answer,
           });
         });
         const loadedColorGroups = Object.entries(groups).map(
           ([color, questions], index) => {
-            while (questions.length < 4) {
-              questions.push({
-                id: questions.length + 1,
-                text: "",
-                answer: "",
-              });
-            }
-            return { id: Date.now() + index, color, questions };
+            return {
+              id: Date.now() + index,
+              name: `Cor ${index + 1}`,
+              color,
+              questions,
+            };
           }
         );
         setColorGroups(loadedColorGroups);
@@ -130,24 +155,22 @@ function HomePageContent() {
         setIsQuizLoaded(false);
 
         const groups: { [key: string]: Question[] } = {};
-        data.template_questions.forEach((q: any) => {
+        data.template_questions.forEach((q: any, i: number) => {
           if (!groups[q.color]) groups[q.color] = [];
           groups[q.color].push({
-            id: groups[q.color].length + 1,
+            id: Date.now() + i, // Use timestamp for unique ID
             text: q.question_text,
             answer: q.answer,
           });
         });
         const loadedColorGroups = Object.entries(groups).map(
           ([color, questions], index) => {
-            while (questions.length < 4) {
-              questions.push({
-                id: questions.length + 1,
-                text: "",
-                answer: "",
-              });
-            }
-            return { id: Date.now() + index, color, questions };
+            return {
+              id: Date.now() + index,
+              name: `Cor ${index + 1}`,
+              color,
+              questions,
+            };
           }
         );
         setColorGroups(loadedColorGroups);
@@ -166,14 +189,14 @@ function HomePageContent() {
       setColorGroups([
         {
           id: Date.now(),
+          name: "Cor 1",
           color: "#FFC107",
-          questions: Array(4)
-            .fill(null)
-            .map((_, i) => ({ id: i + 1, text: "", answer: "" })),
+          // Começa com apenas uma pergunta
+          questions: [{ id: 1, text: "", answer: "" }],
         },
       ]);
     }
-  }, [searchParams, supabase]);
+  }, [searchParams, supabase, checkForDuplicates]);
 
   useEffect(() => {
     setGridState(Array(gridSize * gridSize).fill(""));
@@ -214,6 +237,7 @@ function HomePageContent() {
             setTitle={setTitle}
             colorGroups={colorGroups}
             setColorGroups={setColorGroups}
+            duplicateAnswers={duplicateAnswers}
           />
           <div className="bg-white p-5 rounded-lg shadow-md h-fit mt-6 border border-gray-200">
             <GridSizeSelector

@@ -8,6 +8,7 @@ interface ControlPanelProps {
   setTitle: (title: string) => void;
   colorGroups: ColorGroup[];
   setColorGroups: React.Dispatch<React.SetStateAction<ColorGroup[]>>;
+  duplicateAnswers: Set<string>;
 }
 
 const ControlPanel = ({
@@ -15,16 +16,17 @@ const ControlPanel = ({
   setTitle,
   colorGroups,
   setColorGroups,
+  duplicateAnswers,
 }: ControlPanelProps) => {
   let questionCounter = 0;
 
   const handleAddColor = () => {
     const newColorGroup: ColorGroup = {
       id: Date.now(),
+      name: `Cor ${colorGroups.length + 1}`,
       color: "#E9ECEF",
-      questions: Array(4)
-        .fill(null)
-        .map((_, i) => ({ id: i + 1, text: "", answer: "" })),
+      // Agora começa com apenas uma pergunta
+      questions: [{ id: 1, text: "", answer: "" }],
     };
     setColorGroups([...colorGroups, newColorGroup]);
   };
@@ -65,26 +67,29 @@ const ControlPanel = ({
         />
       </div>
 
-      {colorGroups.map((group, index) => {
-        const baseReferenceNumber = questionCounter + 1;
-        questionCounter += group.questions.length;
+      {/* Div para controlar o scroll */}
+      <div className="max-h-[60vh] overflow-y-auto pr-2">
+        {colorGroups.map((group) => {
+          const baseReferenceNumber = questionCounter + 1;
+          questionCounter += group.questions.length;
 
-        return (
-          <ColorBlock
-            key={group.id}
-            group={group}
-            onChange={handleColorGroupChange}
-            onRemove={handleRemoveColor}
-            canBeRemoved={colorGroups.length > 1}
-            colorNumber={index + 1}
-            baseReferenceNumber={baseReferenceNumber}
-          />
-        );
-      })}
+          return (
+            <ColorBlock
+              key={group.id}
+              group={group}
+              onChange={handleColorGroupChange}
+              onRemove={handleRemoveColor}
+              canBeRemoved={colorGroups.length > 1}
+              baseReferenceNumber={baseReferenceNumber}
+              duplicateAnswers={duplicateAnswers}
+            />
+          );
+        })}
+      </div>
 
       <button
         onClick={handleAddColor}
-        className="w-full mt-2 p-2 border-2 border-dashed border-gray-300 rounded-md text-gray-500 hover:bg-gray-100 transition-colors"
+        className="w-full mt-4 p-2 border-2 border-dashed border-gray-300 rounded-md text-gray-500 hover:bg-gray-100 transition-colors"
       >
         + Adicionar Cor
       </button>

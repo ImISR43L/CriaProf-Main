@@ -68,7 +68,10 @@ export const generatePdf = (
     doc.setFont("helvetica", "bold");
     doc.setFillColor(group.color);
     doc.rect(legendX, currentY, 5, 5, "F");
-    doc.text(`Cor (${group.color})`, legendX + 7, currentY + 4);
+
+    // LINHA MODIFICADA: Removemos o código hexadecimal
+    const colorName = group.name || "Cor";
+    doc.text(colorName, legendX + 7, currentY + 4);
     currentY += 8;
 
     doc.setFontSize(10);
