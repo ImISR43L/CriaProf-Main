@@ -193,3 +193,77 @@ DROP POLICY "Users can view their own profile." ON public.profiles;
 CREATE POLICY "Profiles are viewable by everyone."
 ON public.profiles FOR SELECT
 USING (true);
+
+-- Cria uma função que insere uma nova linha na tabela 'profiles'
+create or replace function public.handle_new_user()
+returns trigger as $$
+begin
+  insert into public.profiles (id, full_name)
+  -- Tenta usar o nome completo dos metadados, se não houver, usa um nome genérico
+  values (new.id, new.raw_user_meta_data->>'full_name');
+  return new;
+end;
+$$ language plpgsql security definer;
+
+-- Cria um gatilho que executa a função 'handle_new_user' sempre que um novo usuário é adicionado
+create or replace trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute procedure public.handle_new_user();
+
+  -- 1. Remover a constraint de chave estrangeira antiga que aponta para auth.users
+ALTER TABLE public.quizzes
+DROP CONSTRAINT quizzes_user_id_fkey;
+
+-- 2. Adicionar a nova constraint que aponta diretamente para a tabela 'profiles'
+-- Isso cria a relação explícita que a API precisa para fazer o join.
+ALTER TABLE public.quizzes
+ADD CONSTRAINT quizzes_user_id_fkey
+FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
+
+-- ========= INÍCIO DO SCRIPT DE CORREÇÃO =========
+
+-- PASSO 1: Corrigir a relação da tabela 'quizzes'
+-- Remove a relação antiga e incorreta com a tabela de usuários.
+-- O "IF EXISTS" previne erros caso esta parte já tenha sido executada.
+ALTER TABLE public.quizzes
+DROP CONSTRAINT IF EXISTS quizzes_user_id_fkey;
+
+-- Cria a nova relação, ligando 'quizzes' diretamente a 'profiles'.
+-- Esta é a correção principal para a página da Comunidade.
+ALTER TABLE public.quizzes
+ADD CONSTRAINT quizzes_user_id_fkey
+FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
+
+
+-- PASSO 2: Garantir que as políticas de leitura pública estão corretas
+-- Remove políticas antigas para evitar conflitos e recria as corretas.
+DROP POLICY IF EXISTS "Users can view their own or public quizzes." ON public.quizzes;
+DROP POLICY IF EXISTS "Users can view their own quizzes." ON public.quizzes;
+CREATE POLICY "Users can view their own or public quizzes."
+ON public.quizzes FOR SELECT
+USING ( (auth.uid() = user_id) OR (is_public = true) );
+
+DROP POLICY IF EXISTS "Profiles are viewable by everyone." ON public.profiles;
+DROP POLICY IF EXISTS "Users can view their own profile." ON public.profiles;
+CREATE POLICY "Profiles are viewable by everyone."
+ON public.profiles FOR SELECT
+USING (true);
+
+
+-- PASSO 3: Garantir que o gatilho de criação de perfil existe
+-- Este código cria a função e o gatilho que automatizam a criação de perfis para novos usuários.
+-- O "CREATE OR REPLACE" garante que a versão mais recente seja usada.
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.profiles (id, full_name)
+  VALUES (new.id, new.raw_user_meta_data->>'full_name');
+  RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+
+-- ========= FIM DO SCRIPT DE CORREÇÃO =========

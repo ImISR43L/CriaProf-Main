@@ -10,17 +10,15 @@ export default function AuthButton() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    router.push("/"); // Redireciona para a home após o logout
+    router.push("/");
     router.refresh();
   };
 
-  // Se o estado do usuário ainda não foi determinado, não renderiza nada para evitar um "flash"
   if (user === undefined) {
     return null;
   }
 
   return user ? (
-    // -- Visual para usuário LOGADO --
     <div className="flex items-center gap-4">
       <Link
         href="/dashboard"
@@ -28,20 +26,22 @@ export default function AuthButton() {
       >
         Meus Questionários
       </Link>
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-gray-500 hidden sm:inline">
-          Olá, {user.email?.split("@")[0]}
-        </span>
-        <button
-          onClick={handleSignOut}
-          className="py-2 px-3 text-sm bg-red-500 text-white rounded-md hover:bg-red-600"
-        >
-          Sair
-        </button>
-      </div>
+      {/* --- LINK ADICIONADO AQUI --- */}
+      <Link
+        href="/account"
+        className="text-sm font-medium text-gray-600 hover:text-blue-600"
+        title="Minha Conta"
+      >
+        Olá, {user.email?.split("@")[0]}
+      </Link>
+      <button
+        onClick={handleSignOut}
+        className="py-2 px-3 text-sm bg-red-500 text-white rounded-md hover:bg-red-600"
+      >
+        Sair
+      </button>
     </div>
   ) : (
-    // -- Visual para usuário DESLOGADO --
     <Link
       href="/login"
       className="py-2 px-4 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
