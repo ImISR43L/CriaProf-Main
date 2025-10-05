@@ -18,12 +18,10 @@ const ControlPanel = ({
 }: ControlPanelProps) => {
   let questionCounter = 0;
 
-  // --- FUNÇÃO MODIFICADA ---
   const handleAddColor = () => {
-    // A verificação de limite foi removida, permitindo adicionar cores indefinidamente.
     const newColorGroup: ColorGroup = {
       id: Date.now(),
-      color: "#E9ECEF", // Uma cor padrão para o novo bloco
+      color: "#E9ECEF",
       questions: Array(4)
         .fill(null)
         .map((_, i) => ({ id: i + 1, text: "", answer: "" })),
@@ -40,21 +38,20 @@ const ControlPanel = ({
   };
 
   const handleRemoveColor = (id: number) => {
-    // A lógica para não remover o último bloco de cor permanece
     if (colorGroups.length > 1) {
       setColorGroups(colorGroups.filter((group) => group.id !== id));
     }
   };
 
   return (
-    <aside className="bg-white dark:bg-slate-800 p-5 rounded-lg shadow-md h-fit border border-gray-200 dark:border-gray-700">
-      <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+    <aside className="bg-white p-5 rounded-lg shadow-md h-fit border border-gray-200">
+      <h2 className="text-xl font-bold text-gray-900 mb-4">
         Painel de Perguntas
       </h2>
       <div className="mb-6">
         <label
           htmlFor="title"
-          className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+          className="block text-sm font-medium text-gray-700 mb-1"
         >
           Título da Atividade
         </label>
@@ -64,7 +61,7 @@ const ControlPanel = ({
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Ex: Revisão de Matemática"
-          className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:ring-blue-500 focus:border-blue-500"
+          className="w-full p-2 border border-gray-300 rounded-md bg-white text-gray-900 focus:ring-blue-500 focus:border-blue-500"
         />
       </div>
 
@@ -87,7 +84,7 @@ const ControlPanel = ({
 
       <button
         onClick={handleAddColor}
-        className="w-full mt-2 p-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+        className="w-full mt-2 p-2 border-2 border-dashed border-gray-300 rounded-md text-gray-500 hover:bg-gray-100 transition-colors"
       >
         + Adicionar Cor
       </button>

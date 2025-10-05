@@ -1,3 +1,4 @@
+// src/app/account/page.tsx
 "use client";
 import { useState, useEffect } from "react";
 import { useSupabase } from "@/components/AuthProvider";
@@ -12,7 +13,7 @@ export default function AccountPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (user === undefined) return; // Aguarda a definição do usuário
+    if (user === undefined) return;
     if (user === null) {
       router.push("/login");
       return;
@@ -51,25 +52,25 @@ export default function AccountPage() {
 
   return (
     <div className="container mx-auto p-8 max-w-lg">
-      <h1 className="text-3xl font-bold mb-6 text-gray-900 dark:text-gray-100">
+      <h1 className="text-3xl font-bold mb-6 text-gray-900 text-center">
         Minha Conta
       </h1>
-      <div className="bg-white dark:bg-slate-800 p-8 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 space-y-6">
+      <div className="bg-white p-8 rounded-lg shadow-md border border-gray-200 space-y-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <label className="block text-sm font-medium text-gray-700">
             Email
           </label>
           <input
             type="text"
             value={user?.email || ""}
             disabled
-            className="w-full p-2 mt-1 bg-gray-100 dark:bg-slate-700 border border-gray-300 dark:border-gray-600 rounded-md cursor-not-allowed text-gray-500 dark:text-gray-400"
+            className="w-full p-2 mt-1 bg-gray-100 border border-gray-300 rounded-md cursor-not-allowed text-gray-500"
           />
         </div>
         <div>
           <label
             htmlFor="fullName"
-            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+            className="block text-sm font-medium text-gray-700"
           >
             Nome Completo
           </label>
@@ -78,7 +79,7 @@ export default function AccountPage() {
             type="text"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
-            className="w-full p-2 mt-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full p-2 mt-1 border border-gray-300 rounded-md bg-white text-gray-900 focus:ring-blue-500 focus:border-blue-500"
             placeholder="Seu nome aparecerá nos quizzes públicos"
           />
         </div>
@@ -89,9 +90,7 @@ export default function AccountPage() {
           Salvar Alterações
         </button>
         {message && (
-          <p className="text-sm text-center text-green-600 dark:text-green-400">
-            {message}
-          </p>
+          <p className="text-sm text-center text-green-600">{message}</p>
         )}
       </div>
     </div>

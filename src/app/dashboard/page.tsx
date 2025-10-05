@@ -1,3 +1,4 @@
+// src/app/dashboard/page.tsx
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -80,9 +81,7 @@ export default function DashboardPage() {
   return (
     <div className="container mx-auto p-8">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-          Meus Questionários
-        </h1>
+        <h1 className="text-3xl font-bold text-gray-900">Meus Questionários</h1>
         <Link
           href="/"
           className="py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
@@ -92,19 +91,16 @@ export default function DashboardPage() {
       </div>
 
       {quizzes.length > 0 ? (
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
+        <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
           <ul>
             {quizzes.map((quiz) => (
-              <li
-                key={quiz.id}
-                className="border-b dark:border-gray-700 last:border-b-0 py-4"
-              >
+              <li key={quiz.id} className="border-b last:border-b-0 py-4">
                 <div className="flex justify-between items-center flex-wrap gap-4">
                   <div>
-                    <h2 className="font-bold text-lg text-gray-900 dark:text-gray-100">
+                    <h2 className="font-bold text-lg text-gray-900">
                       {quiz.title}
                     </h2>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                    <p className="text-sm text-gray-500">
                       Criado em:{" "}
                       {new Date(quiz.created_at).toLocaleDateString("pt-BR")}
                     </p>
@@ -112,7 +108,7 @@ export default function DashboardPage() {
                   <div className="flex items-center gap-2 sm:gap-4">
                     <Link
                       href={`/?quiz_id=${quiz.id}`}
-                      className="text-blue-600 dark:text-blue-400 font-semibold hover:underline px-2"
+                      className="text-blue-600 font-semibold hover:underline px-2"
                     >
                       Abrir
                     </Link>
@@ -120,7 +116,7 @@ export default function DashboardPage() {
                       onClick={() => toggleShareQuiz(quiz.id, quiz.is_public)}
                       className={`py-2 px-4 text-sm rounded-md transition-colors ${
                         quiz.is_public
-                          ? "bg-gray-200 dark:bg-slate-600 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-slate-500"
+                          ? "bg-gray-200 text-gray-800 hover:bg-gray-300"
                           : "bg-green-500 text-white hover:bg-green-600"
                       }`}
                     >
@@ -147,8 +143,8 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 {quiz.is_public && (
-                  <div className="mt-3 bg-blue-50 dark:bg-slate-700 p-3 rounded-md">
-                    <label className="text-sm font-semibold text-blue-800 dark:text-blue-300">
+                  <div className="mt-3 bg-blue-50 p-3 rounded-md">
+                    <label className="text-sm font-semibold text-blue-800">
                       Link Público:
                     </label>
                     <input
@@ -160,7 +156,7 @@ export default function DashboardPage() {
                         navigator.clipboard.writeText(getShareLink(quiz.id));
                         alert("Link copiado para a área de transferência!");
                       }}
-                      className="w-full p-1 mt-1 bg-white dark:bg-slate-600 border border-blue-200 dark:border-blue-900 rounded text-sm cursor-pointer text-gray-700 dark:text-gray-200"
+                      className="w-full p-1 mt-1 bg-white border border-blue-200 rounded text-sm cursor-pointer text-gray-700"
                     />
                   </div>
                 )}
@@ -169,7 +165,7 @@ export default function DashboardPage() {
           </ul>
         </div>
       ) : (
-        <p className="text-center text-gray-500 dark:text-gray-400 mt-10">
+        <p className="text-center text-gray-500 mt-10">
           Você ainda não salvou nenhum questionário.
         </p>
       )}

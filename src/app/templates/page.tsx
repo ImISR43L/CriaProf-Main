@@ -1,3 +1,4 @@
+// src/app/templates/page.tsx
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -33,10 +34,10 @@ export default function TemplatesPage() {
   return (
     <div className="container mx-auto p-8">
       <div className="text-center mb-10">
-        <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100">
+        <h1 className="text-4xl font-bold text-gray-900">
           Galeria de Templates
         </h1>
-        <p className="text-lg text-gray-600 dark:text-gray-400 mt-2">
+        <p className="text-lg text-gray-600 mt-2">
           Escolha um modelo abaixo para começar rapidamente!
         </p>
       </div>
@@ -46,12 +47,12 @@ export default function TemplatesPage() {
           {templates.map((template) => (
             <div
               key={template.id}
-              className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-md p-6 flex flex-col"
+              className="bg-white border border-gray-200 rounded-lg shadow-md p-6 flex flex-col"
             >
-              <h2 className="font-bold text-xl text-gray-900 dark:text-gray-100 mb-2">
+              <h2 className="font-bold text-xl text-gray-900 mb-2">
                 {template.title}
               </h2>
-              <p className="text-gray-600 dark:text-gray-400 flex-grow mb-4">
+              <p className="text-gray-600 flex-grow mb-4">
                 {template.description}
               </p>
               <Link
@@ -64,7 +65,7 @@ export default function TemplatesPage() {
           ))}
         </div>
       ) : (
-        <p className="text-center text-gray-500 dark:text-gray-400 mt-10">
+        <p className="text-center text-gray-500 mt-10">
           Nenhum template encontrado.
         </p>
       )}
