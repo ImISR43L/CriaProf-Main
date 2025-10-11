@@ -1,20 +1,36 @@
 // src/components/InteractiveGrid.tsx
 import React from "react";
+import type { ColorGroup } from "@/lib/types";
+import { getContrastColor } from "@/lib/utils"; // Importar a nossa nova função
 
 interface InteractiveGridProps {
   gridState: string[];
   gridSize: number;
-  onCellChange: (index: number, value: string) => void;
+  colorGroups: ColorGroup[];
+  paintCells: (index: number) => void;
+  isPainting: boolean;
 }
 
 const InteractiveGrid = ({
   gridState,
   gridSize,
-  onCellChange,
+  colorGroups,
+  paintCells,
+  isPainting,
 }: InteractiveGridProps) => {
   const gridStyles = {
     gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))`,
+    gridTemplateRows: `repeat(${gridSize}, minmax(0, 1fr))`,
   };
+
+  const answerToColorMap = new Map<string, string>();
+  colorGroups.forEach((group) => {
+    group.questions.forEach((q) => {
+      if (q.answer.trim() !== "") {
+        answerToColorMap.set(q.answer, group.color.value);
+      }
+    });
+  });
 
   return (
     <section className="bg-white p-5 rounded-lg shadow-md border border-gray-200">
@@ -22,23 +38,36 @@ const InteractiveGrid = ({
         Grade Interativa ({gridSize}x{gridSize})
       </h2>
       <p className="text-gray-500 mb-4 text-sm">
-        Clique e digite o{" "}
-        <span className="font-bold">número de referência</span> da pergunta.
+        Clique numa resposta para selecionar o pincel e depois pinte na grelha.
       </p>
       <div
         className="grid border-t border-l border-gray-400"
         style={{ ...gridStyles, aspectRatio: "1 / 1" }}
       >
-        {gridState.map((cellValue, index) => (
-          <input
-            key={index}
-            type="text"
-            value={cellValue}
-            onChange={(e) => onCellChange(index, e.target.value)}
-            maxLength={3}
-            className="w-full h-full bg-white text-gray-800 text-center text-sm p-0 border-r border-b border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:z-10"
-          />
-        ))}
+        {gridState.map((cellValue, index) => {
+          const bgColor = answerToColorMap.get(cellValue) || '#FFFFFF';
+          // Usar a nossa função para obter a cor de texto com melhor contraste
+          const textColor = getContrastColor(bgColor);
+          
+          return (
+            <div
+              key={index}
+              onMouseDown={() => paintCells(index)}
+              onMouseEnter={() => {
+                if (isPainting) {
+                  paintCells(index);
+                }
+              }}
+              className="w-full h-full text-center text-sm p-0 border-r border-b border-gray-400 select-none cursor-pointer flex items-center justify-center"
+              style={{ 
+                  backgroundColor: bgColor,
+                  color: textColor 
+              }}
+            >
+              {cellValue}
+            </div>
+          );
+        })}
       </div>
     </section>
   );

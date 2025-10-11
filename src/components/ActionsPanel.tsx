@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { ColorGroup } from "@/app/page";
+import type { ColorGroup } from "@/lib/types"; 
 import { generatePdf } from "@/lib/pdfGenerator";
 import { useSupabase } from "@/components/AuthProvider";
 

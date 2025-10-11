@@ -1,7 +1,8 @@
 // src/components/ControlPanel.tsx
 import React from "react";
 import ColorBlock from "./ColorBlock";
-import { ColorGroup } from "@/app/page";
+import { schoolColorPalette } from "@/lib/colors";
+import type { ColorGroup, ActiveTool, Question } from "@/lib/types";
 
 interface ControlPanelProps {
   title: string;
@@ -9,6 +10,9 @@ interface ControlPanelProps {
   colorGroups: ColorGroup[];
   setColorGroups: React.Dispatch<React.SetStateAction<ColorGroup[]>>;
   duplicateAnswers: Set<string>;
+  setActiveTool: (tool: ActiveTool | null) => void;
+  activeTool: ActiveTool | null;
+  clearAnswersFromGrid: (answers: string[]) => void;
 }
 
 const ControlPanel = ({
@@ -17,15 +21,22 @@ const ControlPanel = ({
   colorGroups,
   setColorGroups,
   duplicateAnswers,
+  setActiveTool,
+  activeTool,
+  clearAnswersFromGrid,
 }: ControlPanelProps) => {
   let questionCounter = 0;
+  const usedColorValues = new Set(colorGroups.map((g) => g.color.value));
 
   const handleAddColor = () => {
+    const nextColor = schoolColorPalette.find((c) => !usedColorValues.has(c.value));
+    if (!nextColor) {
+      alert("Todas as cores disponíveis já foram adicionadas.");
+      return;
+    }
     const newColorGroup: ColorGroup = {
       id: Date.now(),
-      name: `Cor ${colorGroups.length + 1}`,
-      color: "#E9ECEF",
-      // Agora começa com apenas uma pergunta
+      color: nextColor,
       questions: [{ id: 1, text: "", answer: "" }],
     };
     setColorGroups([...colorGroups, newColorGroup]);
@@ -41,7 +52,18 @@ const ControlPanel = ({
 
   const handleRemoveColor = (id: number) => {
     if (colorGroups.length > 1) {
+      const groupToRemove = colorGroups.find((g) => g.id === id);
+      if (groupToRemove) {
+        const answersToClear = groupToRemove.questions.map((q) => q.answer).filter(Boolean);
+        clearAnswersFromGrid(answersToClear);
+      }
       setColorGroups(colorGroups.filter((group) => group.id !== id));
+    }
+  };
+
+  const handleRemoveQuestion = (questionToRemove: Question) => {
+    if (questionToRemove.answer.trim() !== "") {
+      clearAnswersFromGrid([questionToRemove.answer]);
     }
   };
 
@@ -66,33 +88,35 @@ const ControlPanel = ({
           className="w-full p-2 border border-gray-300 rounded-md bg-white text-gray-900 focus:ring-blue-500 focus:border-blue-500"
         />
       </div>
-
-      {/* Div para controlar o scroll */}
       <div className="max-h-[60vh] overflow-y-auto pr-2">
         {colorGroups.map((group) => {
           const baseReferenceNumber = questionCounter + 1;
           questionCounter += group.questions.length;
-
           return (
             <ColorBlock
               key={group.id}
               group={group}
               onChange={handleColorGroupChange}
               onRemove={handleRemoveColor}
+              onRemoveQuestion={handleRemoveQuestion}
               canBeRemoved={colorGroups.length > 1}
               baseReferenceNumber={baseReferenceNumber}
               duplicateAnswers={duplicateAnswers}
+              usedColorValues={usedColorValues}
+              setActiveTool={setActiveTool}
+              activeTool={activeTool}
             />
           );
         })}
       </div>
-
-      <button
-        onClick={handleAddColor}
-        className="w-full mt-4 p-2 border-2 border-dashed border-gray-300 rounded-md text-gray-500 hover:bg-gray-100 transition-colors"
-      >
-        + Adicionar Cor
-      </button>
+      {colorGroups.length < schoolColorPalette.length && (
+        <button
+          onClick={handleAddColor}
+          className="w-full mt-4 p-2 border-2 border-dashed border-gray-400 rounded-md text-gray-600 font-semibold hover:bg-gray-100 hover:border-gray-500 transition-colors"
+        >
+          + Adicionar Cor
+        </button>
+      )}
     </aside>
   );
 };

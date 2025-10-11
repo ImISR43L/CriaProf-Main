@@ -1,3 +1,4 @@
+// src/components/AuthProvider.tsx
 "use client";
 import { createContext, useContext, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
@@ -15,7 +16,8 @@ export default function AuthProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = createClient();
+  // CORREÇÃO: Usamos useState para garantir que o cliente seja criado apenas uma vez.
+  const [supabase] = useState(() => createClient());
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {

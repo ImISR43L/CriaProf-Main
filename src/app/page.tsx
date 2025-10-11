@@ -1,60 +1,16 @@
 // src/app/page.tsx
 "use client";
-import { useState, useEffect, Suspense, useCallback } from "react";
+import { useState, useEffect, Suspense, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import ControlPanel from "@/components/ControlPanel";
 import InteractiveGrid from "@/components/InteractiveGrid";
-import ActionsPanel from "@/components/ActionsPanel";
+import ToolPanel from "@/components/ToolPanel";
+import GridSizeSelector from "@/components/GridSizeSelector";
 import { useSupabase } from "@/components/AuthProvider";
 import Spinner from "@/components/Spinner";
-
-export interface Question {
-  id: number;
-  text: string;
-  answer: string;
-}
-export interface ColorGroup {
-  id: number;
-  color: string;
-  name: string;
-  questions: Question[];
-}
-interface GridSizeSelectorProps {
-  selectedSize: number;
-  onChange: (size: number) => void;
-  disabled: boolean;
-}
-
-const GridSizeSelector = ({
-  selectedSize,
-  onChange,
-  disabled,
-}: GridSizeSelectorProps) => {
-  const sizes = [10, 15, 20];
-  return (
-    <div className="mb-2">
-      <label className="block text-sm font-medium text-gray-700 mb-2">
-        Tamanho da Grade
-      </label>
-      <div className="flex gap-2">
-        {sizes.map((size) => (
-          <button
-            key={size}
-            onClick={() => onChange(size)}
-            disabled={disabled}
-            className={`px-4 py-2 rounded-md text-sm font-semibold border transition-colors ${
-              selectedSize === size
-                ? "bg-blue-600 text-white border-blue-600"
-                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-            } disabled:bg-gray-200 disabled:cursor-not-allowed`}
-          >
-            {size}x{size}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-};
+import type { ColorGroup, ActiveTool, Question } from "@/lib/types";
+import { useHistory } from "@/hooks/useHistory";
+import { schoolColorPalette } from "@/lib/colors";
 
 function HomePageContent() {
   const { supabase } = useSupabase();
@@ -62,12 +18,24 @@ function HomePageContent() {
   const [title, setTitle] = useState("");
   const [colorGroups, setColorGroups] = useState<ColorGroup[]>([]);
   const [gridSize, setGridSize] = useState(15);
-  const [gridState, setGridState] = useState<string[]>([]);
+  
+  const {
+    state: historyState,
+    setState: setHistoryState,
+    undo: undoGrid,
+    redo: redoGrid,
+  } = useHistory<string[]>(Array(15 * 15).fill(""));
+
+  const [gridState, setGridState] = useState<string[]>(historyState);
+  const gridStateBeforePaint = useRef<string[]>([]);
+  
   const [isLoading, setIsLoading] = useState(true);
   const [isQuizLoaded, setIsQuizLoaded] = useState(false);
-  const [duplicateAnswers, setDuplicateAnswers] = useState<Set<string>>(
-    new Set()
-  );
+  const [duplicateAnswers, setDuplicateAnswers] = useState<Set<string>>(new Set());
+  const [activeTool, setActiveTool] = useState<ActiveTool | null>(null);
+  const [isEraserActive, setIsEraserActive] = useState(false);
+  const [brushSize, setBrushSize] = useState(1);
+  const [isPainting, setIsPainting] = useState(false);
 
   const checkForDuplicates = useCallback((groups: ColorGroup[]) => {
     const answerCounts = new Map<string, number>();
@@ -78,7 +46,6 @@ function HomePageContent() {
         }
       });
     });
-
     const duplicates = new Set<string>();
     for (const [answer, count] of answerCounts.entries()) {
       if (count > 1) {
@@ -88,193 +55,93 @@ function HomePageContent() {
     setDuplicateAnswers(duplicates);
   }, []);
 
-  useEffect(() => {
-    checkForDuplicates(colorGroups);
-  }, [colorGroups, checkForDuplicates]);
+  useEffect(() => { checkForDuplicates(colorGroups); }, [colorGroups, checkForDuplicates]);
 
   useEffect(() => {
-    const quizId = searchParams.get("quiz_id");
-    const templateId = searchParams.get("template_id");
+    setIsLoading(false); 
+  }, []);
 
-    const fetchQuizData = async (id: string) => {
-      setIsLoading(true);
-      const { data, error } = await supabase
-        .from("quizzes")
-        .select(
-          "title, grid_data, grid_size, questions ( color, question_text, answer )"
-        )
-        .eq("id", id)
-        .single();
-
-      if (data) {
-        const loadedSize = data.grid_size || 15;
-        setTitle(data.title);
-        setGridSize(loadedSize);
-        setGridState(data.grid_data || Array(loadedSize * loadedSize).fill(""));
-        setIsQuizLoaded(true);
-
-        const groups: { [key: string]: Question[] } = {};
-        data.questions.forEach((q: any, i: number) => {
-          if (!groups[q.color]) groups[q.color] = [];
-          groups[q.color].push({
-            id: Date.now() + i, // Use timestamp for unique ID
-            text: q.question_text,
-            answer: q.answer,
-          });
-        });
-        const loadedColorGroups = Object.entries(groups).map(
-          ([color, questions], index) => {
-            return {
-              id: Date.now() + index,
-              name: `Cor ${index + 1}`,
-              color,
-              questions,
-            };
-          }
-        );
-        setColorGroups(loadedColorGroups);
-      }
-      setIsLoading(false);
-    };
-
-    const fetchTemplateData = async (id: string) => {
-      setIsLoading(true);
-      const { data, error } = await supabase
-        .from("templates")
-        .select(
-          "title, grid_size, template_questions ( color, question_text, answer )"
-        )
-        .eq("id", id)
-        .single();
-
-      if (data) {
-        const loadedSize = data.grid_size || 15;
-        setTitle(data.title);
-        setGridSize(loadedSize);
-        setGridState(Array(loadedSize * loadedSize).fill(""));
-        setIsQuizLoaded(false);
-
-        const groups: { [key: string]: Question[] } = {};
-        data.template_questions.forEach((q: any, i: number) => {
-          if (!groups[q.color]) groups[q.color] = [];
-          groups[q.color].push({
-            id: Date.now() + i, // Use timestamp for unique ID
-            text: q.question_text,
-            answer: q.answer,
-          });
-        });
-        const loadedColorGroups = Object.entries(groups).map(
-          ([color, questions], index) => {
-            return {
-              id: Date.now() + index,
-              name: `Cor ${index + 1}`,
-              color,
-              questions,
-            };
-          }
-        );
-        setColorGroups(loadedColorGroups);
-      }
-      setIsLoading(false);
-    };
-
-    if (quizId) {
-      fetchQuizData(quizId);
-    } else if (templateId) {
-      fetchTemplateData(templateId);
-    } else {
-      setIsLoading(false);
-      setIsQuizLoaded(false);
-      setTitle("");
-      setColorGroups([
-        {
-          id: Date.now(),
-          name: "Cor 1",
-          color: "#FFC107",
-          // Começa com apenas uma pergunta
-          questions: [{ id: 1, text: "", answer: "" }],
-        },
-      ]);
+  useEffect(() => {
+    if (!isLoading && colorGroups.length === 0 && !searchParams.get('quiz_id')) {
+        setColorGroups([{
+            id: Date.now(),
+            color: schoolColorPalette[6], 
+            questions: [{ id: 1, text: "", answer: "" }],
+        }]);
     }
-  }, [searchParams, supabase, checkForDuplicates]);
+  }, [isLoading, colorGroups.length, searchParams]);
+
+  useEffect(() => { setGridState(historyState); }, [historyState]);
 
   useEffect(() => {
-    setGridState(Array(gridSize * gridSize).fill(""));
-  }, [gridSize]);
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.ctrlKey && event.key === 'z') { event.preventDefault(); undoGrid(); }
+      if (event.ctrlKey && event.key === 'y') { event.preventDefault(); redoGrid(); }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => { window.removeEventListener('keydown', handleKeyDown); };
+  }, [undoGrid, redoGrid]);
 
-  const handleGridSizeChange = (newSize: number) => {
-    if (!isQuizLoaded) {
-      setGridSize(newSize);
-    }
-  };
-  const handleGridChange = (index: number, value: string) => {
-    const numericValue = value.replace(/[^0-9]/g, "");
-    const newGridState = [...gridState];
-    newGridState[index] = numericValue;
+  useEffect(() => {
+    const newGrid = Array(gridSize * gridSize).fill("");
+    setGridState(newGrid);
+    setHistoryState(newGrid, true);
+  }, [gridSize, setHistoryState]);
+  
+  const clearAnswersFromGrid = (answersToClear: string[]) => {
+    if (answersToClear.length === 0) return;
+    const answersSet = new Set(answersToClear);
+    const newGridState = gridState.map(cell => answersSet.has(cell) ? "" : cell);
     setGridState(newGridState);
-  };
-  const handleClearGrid = () => {
-    if (window.confirm("Tem certeza?")) {
-      setGridState(Array(gridSize * gridSize).fill(""));
-    }
+    setHistoryState(newGridState);
   };
 
-  if (isLoading) {
-    return <Spinner />;
-  }
+  const paintCells = (index: number) => {
+    setGridState(currentGrid => {
+        const newGridState = [...currentGrid];
+        const startCol = index % gridSize;
+        const startRow = Math.floor(index / gridSize);
+        for (let r = 0; r < brushSize; r++) {
+            for (let c = 0; c < brushSize; c++) {
+                const targetRow = startRow + r;
+                const targetCol = startCol + c;
+                if (targetRow < gridSize && targetCol < gridSize) {
+                    const targetIndex = targetRow * gridSize + targetCol;
+                    if (isEraserActive) newGridState[targetIndex] = "";
+                    else if (activeTool?.answer.trim()) newGridState[targetIndex] = activeTool.answer;
+                }
+            }
+        }
+        return newGridState;
+    });
+  };
+
+  const handleGridSizeChange = (newSize: number) => { if (!isQuizLoaded) setGridSize(newSize); };
+  const handleClearGrid = () => { if (window.confirm("Tem certeza?")) { const clearedGrid = Array(gridSize*gridSize).fill(""); setGridState(clearedGrid); setHistoryState(clearedGrid); }};
+  const handleSetTool = (tool: ActiveTool | null) => { setActiveTool(tool); setIsEraserActive(false); };
+  const handleSetEraser = () => { setIsEraserActive(true); setActiveTool(null); };
+  const handleMouseUp = () => { setIsPainting(false); if (JSON.stringify(gridState) !== JSON.stringify(gridStateBeforePaint.current)) setHistoryState(gridState); };
+
+  if (isLoading) return <Spinner />;
 
   return (
     <div className="container mx-auto p-4 sm:p-6 lg:p-8">
-      <header className="text-center mb-8">
-        <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">
-          Gerador de Atividades "Pinte por Número"
-        </h1>
-      </header>
+      <header className="text-center mb-8"><h1 className="text-3xl sm:text-4xl font-bold text-gray-900">Gerador de Atividades "Pinte por Número"</h1></header>
       <div className="grid grid-cols-1 lg:grid-cols-[1fr] xl:grid-cols-[380px_1fr_320px] gap-6 items-start">
-        <div>
-          <ControlPanel
-            title={title}
-            setTitle={setTitle}
-            colorGroups={colorGroups}
-            setColorGroups={setColorGroups}
-            duplicateAnswers={duplicateAnswers}
-          />
-          <div className="bg-white p-5 rounded-lg shadow-md h-fit mt-6 border border-gray-200">
-            <GridSizeSelector
-              selectedSize={gridSize}
-              onChange={handleGridSizeChange}
-              disabled={isQuizLoaded}
-            />
-            {isQuizLoaded && (
-              <p className="text-xs text-gray-500">
-                O tamanho da grade não pode ser alterado num questionário salvo.
-              </p>
-            )}
+        <div className="space-y-6">
+          <div className="bg-white p-5 rounded-lg shadow-md h-fit border border-gray-200">
+            <GridSizeSelector selectedSize={gridSize} onChange={handleGridSizeChange} disabled={isQuizLoaded} />
+            {isQuizLoaded && <p className="text-xs text-gray-500 mt-2">O tamanho da grade não pode ser alterado num questionário salvo.</p>}
           </div>
+          <ControlPanel title={title} setTitle={setTitle} colorGroups={colorGroups} setColorGroups={setColorGroups} duplicateAnswers={duplicateAnswers} setActiveTool={handleSetTool} activeTool={activeTool} clearAnswersFromGrid={clearAnswersFromGrid} />
         </div>
-        <div className="self-start">
-          <InteractiveGrid
-            gridState={gridState}
-            gridSize={gridSize}
-            onCellChange={handleGridChange}
-          />
+        <div className="self-start" onMouseDown={() => { setIsPainting(true); gridStateBeforePaint.current = gridState; }} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
+          <InteractiveGrid gridState={gridState} gridSize={gridSize} colorGroups={colorGroups} paintCells={paintCells} isPainting={isPainting} />
         </div>
-        <ActionsPanel
-          onClearGrid={handleClearGrid}
-          activityTitle={title}
-          colorGroups={colorGroups}
-          gridState={gridState}
-          gridSize={gridSize}
-        />
+        <ToolPanel onClearGrid={handleClearGrid} activityTitle={title} colorGroups={colorGroups} gridState={gridState} gridSize={gridSize} activeTool={activeTool} brushSize={brushSize} setBrushSize={setBrushSize} isEraserActive={isEraserActive} onSelectEraser={handleSetEraser} />
       </div>
     </div>
   );
 }
 
-export default function HomePage() {
-  return (
-    <Suspense fallback={<Spinner />}>
-      <HomePageContent />
-    </Suspense>
-  );
-}
+export default function HomePage() { return <Suspense fallback={<Spinner />}><HomePageContent /></Suspense>; }

@@ -1,6 +1,7 @@
 // src/components/ColorBlock.tsx
-import React from "react";
-import { ColorGroup, Question } from "@/app/page";
+import React, { useState, useRef, useEffect } from "react";
+import type { ColorGroup, Question, ActiveTool } from "@/lib/types";
+import { schoolColorPalette } from "@/lib/colors";
 
 interface ColorBlockProps {
   group: ColorGroup;
@@ -9,6 +10,10 @@ interface ColorBlockProps {
   canBeRemoved: boolean;
   baseReferenceNumber: number;
   duplicateAnswers: Set<string>;
+  usedColorValues: Set<string>;
+  setActiveTool: (tool: ActiveTool | null) => void;
+  activeTool: ActiveTool | null;
+  onRemoveQuestion: (question: Question) => void;
 }
 
 const ColorBlock = ({
@@ -18,14 +23,33 @@ const ColorBlock = ({
   canBeRemoved,
   baseReferenceNumber,
   duplicateAnswers,
+  usedColorValues,
+  setActiveTool,
+  activeTool,
+  onRemoveQuestion,
 }: ColorBlockProps) => {
-  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onChange({ ...group, name: e.target.value });
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const pickerRef = useRef<HTMLDivElement>(null);
+
+  const handleColorChange = (selectedColor: (typeof schoolColorPalette)[0]) => {
+    onChange({ ...group, color: selectedColor });
+    setIsPickerOpen(false);
   };
 
-  const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onChange({ ...group, color: e.target.value });
-  };
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        pickerRef.current &&
+        !pickerRef.current.contains(event.target as Node)
+      ) {
+        setIsPickerOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [pickerRef]);
 
   const handleQuestionChange = (
     questionId: number,
@@ -40,7 +64,6 @@ const ColorBlock = ({
 
   const handleAddQuestion = () => {
     const newQuestion: Question = {
-      // Usar timestamp para garantir ID único
       id: Date.now(),
       text: "",
       answer: "",
@@ -48,86 +71,121 @@ const ColorBlock = ({
     onChange({ ...group, questions: [...group.questions, newQuestion] });
   };
 
-  const handleRemoveQuestion = (questionIdToRemove: number) => {
-    // Impede a remoção da última pergunta
+  const handleRemoveQuestion = (questionToRemove: Question) => {
     if (group.questions.length <= 1) return;
+    onRemoveQuestion(questionToRemove);
+    
     const updatedQuestions = group.questions.filter(
-      (q) => q.id !== questionIdToRemove
+      (q) => q.id !== questionToRemove.id
     );
     onChange({ ...group, questions: updatedQuestions });
   };
 
   return (
     <div className="border border-gray-200 rounded-lg p-4 mb-4 relative">
-      <div className="flex items-center gap-3 pb-3 mb-3 border-b border-gray-200">
-        <input
-          type="color"
-          value={group.color}
-          onChange={handleColorChange}
-          className="w-10 h-10 p-0 border-none cursor-pointer bg-transparent"
-        />
-        <input
-          type="text"
-          value={group.name}
-          onChange={handleNameChange}
-          placeholder="Nome da Cor"
-          className="font-bold text-lg text-gray-900 w-full p-1 border-b-2 border-transparent focus:border-blue-500 outline-none"
-        />
+      <div className="flex items-center justify-between pb-3 mb-3 border-b border-gray-200">
+        <div className="flex items-center gap-3 relative" ref={pickerRef}>
+          <button
+            onClick={() => setIsPickerOpen(!isPickerOpen)}
+            className="w-10 h-10 rounded-md border border-gray-300 cursor-pointer"
+            style={{ backgroundColor: group.color.value }}
+            aria-label="Selecionar cor"
+          />
+          <span className="font-bold text-lg text-gray-900">{group.color.name}</span>
+          
+          {isPickerOpen && (
+            <div className="absolute top-full mt-2 w-64 bg-white border border-gray-300 rounded-lg shadow-lg p-2 z-10 grid grid-cols-6 gap-2">
+              {schoolColorPalette.map((colorOption) => {
+                const isUsed = usedColorValues.has(colorOption.value);
+                const isCurrentlySelected = group.color.value === colorOption.value;
+                return (
+                  <button
+                    key={colorOption.value}
+                    onClick={() => handleColorChange(colorOption)}
+                    disabled={isUsed && !isCurrentlySelected}
+                    className={`w-8 h-8 rounded-md border ${isCurrentlySelected ? 'ring-2 ring-blue-500' : 'border-gray-200'} disabled:opacity-25 disabled:cursor-not-allowed`}
+                    style={{ backgroundColor: colorOption.value }}
+                    title={colorOption.name}
+                  />
+                );
+              })}
+            </div>
+          )}
+        </div>
+
         {canBeRemoved && (
           <button
             onClick={() => onRemove(group.id)}
-            className="absolute top-2 right-2 text-gray-400 hover:text-red-500 text-xl"
+            className="text-gray-400 hover:text-red-500 text-xl"
             title="Remover Cor"
           >
             &times;
           </button>
         )}
       </div>
+
       <div className="space-y-3">
         {group.questions.map((q, index) => {
+          const questionRef = baseReferenceNumber + index;
           const isDuplicate =
             duplicateAnswers.has(q.answer) && q.answer.trim() !== "";
+          const isActiveTool =
+            activeTool?.answer === q.answer &&
+            activeTool?.color.value === group.color.value;
+
           return (
-            <div key={q.id} className="relative">
+            <div key={q.id} className="relative pt-5">
+              {group.questions.length > 1 && (
+                <button
+                  onClick={() => handleRemoveQuestion(q)}
+                  className="absolute top-0 left-0 text-gray-400 hover:text-red-500 text-lg leading-none"
+                  title="Remover Pergunta"
+                >
+                  &times;
+                </button>
+              )}
+
               <div className="flex items-center gap-2 mb-1">
                 <span className="font-bold text-gray-500 text-sm">
-                  ({baseReferenceNumber + index})
+                  ({questionRef})
                 </span>
-                <input
-                  type="text"
+                <textarea
                   placeholder={`Pergunta ${index + 1}`}
                   value={q.text}
                   onChange={(e) =>
                     handleQuestionChange(q.id, "text", e.target.value)
                   }
-                  className="flex-grow p-2 border border-gray-300 rounded-md text-sm bg-white text-gray-900 focus:ring-blue-500 focus:border-blue-500"
+                  rows={3}
+                  className="flex-grow p-2 border border-gray-300 rounded-md text-sm bg-white text-gray-900 focus:ring-blue-500 focus:border-blue-500 resize-none"
                 />
               </div>
-              <input
-                type="text"
-                placeholder="Resposta"
-                value={q.answer}
-                onChange={(e) =>
-                  handleQuestionChange(q.id, "answer", e.target.value)
-                }
-                maxLength={50}
-                className={`w-full p-2 border rounded-md text-sm bg-white text-gray-900 focus:ring-blue-500 focus:border-blue-500 ${
-                  isDuplicate ? "border-red-500" : "border-gray-300"
-                }`}
-              />
+
+              <div className="relative flex items-center">
+                <input
+                  type="text"
+                  placeholder="Resposta"
+                  value={q.answer}
+                  onChange={(e) =>
+                    handleQuestionChange(q.id, "answer", e.target.value)
+                  }
+                  onClick={() => {
+                    if (q.answer.trim() !== "") {
+                      setActiveTool({ answer: q.answer, color: group.color });
+                    }
+                  }}
+                  maxLength={50}
+                  className={`w-full p-2 border rounded-md text-sm bg-white text-gray-900 cursor-pointer ${
+                    isDuplicate ? "border-red-500" : "border-gray-300"
+                  } ${
+                    isActiveTool ? "ring-2 ring-blue-500 border-blue-500" : ""
+                  }`}
+                />
+              </div>
+
               {isDuplicate && (
                 <p className="text-xs text-red-600 mt-1">
                   Esta resposta já está a ser usada.
                 </p>
-              )}
-              {group.questions.length > 1 && (
-                <button
-                  onClick={() => handleRemoveQuestion(q.id)}
-                  className="absolute top-1/2 -right-5 transform -translate-y-1/2 text-gray-400 hover:text-red-500 text-lg"
-                  title="Remover Pergunta"
-                >
-                  &times;
-                </button>
               )}
             </div>
           );

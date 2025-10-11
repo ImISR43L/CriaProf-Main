@@ -1,6 +1,6 @@
 // src/lib/pdfGenerator.ts
 import jsPDF from "jspdf";
-import { ColorGroup } from "@/app/page";
+import type { ColorGroup } from "./types";
 
 export const generatePdf = (
   activityTitle: string,
@@ -66,12 +66,11 @@ export const generatePdf = (
 
     doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
-    doc.setFillColor(group.color);
+    doc.setFillColor(group.color.value);
     doc.rect(legendX, currentY, 5, 5, "F");
-
-    // LINHA MODIFICADA: Removemos o código hexadecimal
-    const colorName = group.name || "Cor";
-    doc.text(colorName, legendX + 7, currentY + 4);
+    
+    // Agora usamos group.color.name
+    doc.text(group.color.name, legendX + 7, currentY + 4);
     currentY += 8;
 
     doc.setFontSize(10);
