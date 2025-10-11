@@ -13,6 +13,7 @@ interface ControlPanelProps {
   setActiveTool: (tool: ActiveTool | null) => void;
   activeTool: ActiveTool | null;
   clearAnswersFromGrid: (answers: string[]) => void;
+  isOwner: boolean;
 }
 
 const ControlPanel = ({
@@ -24,12 +25,16 @@ const ControlPanel = ({
   setActiveTool,
   activeTool,
   clearAnswersFromGrid,
+  isOwner,
 }: ControlPanelProps) => {
   let questionCounter = 0;
   const usedColorValues = new Set(colorGroups.map((g) => g.color.value));
 
   const handleAddColor = () => {
-    const nextColor = schoolColorPalette.find((c) => !usedColorValues.has(c.value));
+    if (!isOwner) return;
+    const nextColor = schoolColorPalette.find(
+      (c) => !usedColorValues.has(c.value)
+    );
     if (!nextColor) {
       alert("Todas as cores disponíveis já foram adicionadas.");
       return;
@@ -43,6 +48,7 @@ const ControlPanel = ({
   };
 
   const handleColorGroupChange = (updatedGroup: ColorGroup) => {
+    if (!isOwner) return;
     setColorGroups(
       colorGroups.map((group) =>
         group.id === updatedGroup.id ? updatedGroup : group
@@ -51,14 +57,15 @@ const ControlPanel = ({
   };
 
   const handleRemoveColor = (id: number) => {
-    if (colorGroups.length > 1) {
-      const groupToRemove = colorGroups.find((g) => g.id === id);
-      if (groupToRemove) {
-        const answersToClear = groupToRemove.questions.map((q) => q.answer).filter(Boolean);
-        clearAnswersFromGrid(answersToClear);
-      }
-      setColorGroups(colorGroups.filter((group) => group.id !== id));
+    if (!isOwner || colorGroups.length <= 1) return;
+    const groupToRemove = colorGroups.find((g) => g.id === id);
+    if (groupToRemove) {
+      const answersToClear = groupToRemove.questions
+        .map((q) => q.answer)
+        .filter(Boolean);
+      clearAnswersFromGrid(answersToClear);
     }
+    setColorGroups(colorGroups.filter((group) => group.id !== id));
   };
 
   const handleRemoveQuestion = (questionToRemove: Question) => {
@@ -85,7 +92,8 @@ const ControlPanel = ({
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Ex: Revisão de Matemática"
-          className="w-full p-2 border border-gray-300 rounded-md bg-white text-gray-900 focus:ring-blue-500 focus:border-blue-500"
+          className="w-full p-2 border border-gray-300 rounded-md bg-white text-gray-900 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+          disabled={!isOwner}
         />
       </div>
       <div className="max-h-[60vh] overflow-y-auto pr-2">
@@ -105,11 +113,12 @@ const ControlPanel = ({
               usedColorValues={usedColorValues}
               setActiveTool={setActiveTool}
               activeTool={activeTool}
+              disabled={!isOwner}
             />
           );
         })}
       </div>
-      {colorGroups.length < schoolColorPalette.length && (
+      {isOwner && colorGroups.length < schoolColorPalette.length && (
         <button
           onClick={handleAddColor}
           className="w-full mt-4 p-2 border-2 border-dashed border-gray-400 rounded-md text-gray-600 font-semibold hover:bg-gray-100 hover:border-gray-500 transition-colors"

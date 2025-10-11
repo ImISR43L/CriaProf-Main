@@ -1,19 +1,20 @@
 // src/app/page.tsx
 "use client";
 import { useState, useEffect, Suspense, useCallback, useRef } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import ControlPanel from "@/components/ControlPanel";
 import InteractiveGrid from "@/components/InteractiveGrid";
 import ToolPanel from "@/components/ToolPanel";
 import GridSizeSelector from "@/components/GridSizeSelector";
 import { useSupabase } from "@/components/AuthProvider";
 import Spinner from "@/components/Spinner";
-import type { ColorGroup, ActiveTool, Question } from "@/lib/types";
+import type { ColorGroup, ActiveTool } from "@/lib/types";
 import { useHistory } from "@/hooks/useHistory";
 
 function HomePageContent() {
-  const { supabase } = useSupabase();
+  const { supabase, user } = useSupabase();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [title, setTitle] = useState("");
   const [colorGroups, setColorGroups] = useState<ColorGroup[]>([]);
   const [gridSize, setGridSize] = useState(15);
@@ -30,6 +31,8 @@ function HomePageContent() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [isQuizLoaded, setIsQuizLoaded] = useState(false);
+  const [currentQuizId, setCurrentQuizId] = useState<string | null>(null);
+  const [isOwner, setIsOwner] = useState(false);
   const [duplicateAnswers, setDuplicateAnswers] = useState<Set<string>>(
     new Set()
   );
@@ -38,7 +41,6 @@ function HomePageContent() {
   const [brushSize, setBrushSize] = useState(1);
   const [isPainting, setIsPainting] = useState(false);
 
-  // Função para limpar o pincel se a resposta associada for removida
   const resetActiveToolIfNeeded = (removedAnswers: string[]) => {
     if (activeTool && removedAnswers.includes(activeTool.answer)) {
       setActiveTool(null);
@@ -67,16 +69,137 @@ function HomePageContent() {
     checkForDuplicates(colorGroups);
   }, [colorGroups, checkForDuplicates]);
 
+  // Efeito principal para carregar dados
   useEffect(() => {
-    setIsLoading(false);
-  }, []);
+    const quizId = searchParams.get("quiz_id");
+    const templateId = searchParams.get("template_id");
+    setCurrentQuizId(quizId);
 
+    const processAndSetData = (
+      quizTitle: string,
+      quizGridSize: number,
+      quizGridData: string[] | null,
+      questionsData: any[]
+    ) => {
+      setTitle(quizTitle);
+      setGridSize(quizGridSize);
+      const loadedGridState =
+        quizGridData && quizGridData.length > 0
+          ? quizGridData
+          : Array(quizGridSize * quizGridSize).fill("");
+      setHistoryState(loadedGridState, true);
+
+      const newColorGroups = new Map<string, ColorGroup>();
+      questionsData.forEach((q, index) => {
+        const colorObj = JSON.parse(q.color);
+        if (!newColorGroups.has(colorObj.value)) {
+          newColorGroups.set(colorObj.value, {
+            id: Date.now() + index * 1000, // Chave mais robusta
+            color: colorObj,
+            questions: [],
+          });
+        }
+        newColorGroups.get(colorObj.value)!.questions.push({
+          id: Date.now() + index, // Chave mais robusta
+          text: q.question_text,
+          answer: q.answer,
+        });
+      });
+
+      setColorGroups(Array.from(newColorGroups.values()));
+    };
+
+    const fetchQuiz = async (id: string) => {
+      setIsLoading(true);
+      const { data: quizData, error: quizError } = await supabase
+        .from("quizzes")
+        .select("title, grid_data, grid_size, user_id")
+        .eq("id", id)
+        .single();
+
+      if (quizError || !quizData) {
+        console.error("Erro ao carregar o questionário:", quizError);
+        router.push("/");
+        return;
+      }
+
+      setIsOwner(user?.id === quizData.user_id);
+
+      const { data: questionsData, error: questionsError } = await supabase
+        .from("questions")
+        .select("color, question_text, answer")
+        .eq("quiz_id", id);
+
+      if (questionsError) {
+        console.error("Erro ao carregar as perguntas:", questionsError);
+        setIsLoading(false);
+        return;
+      }
+
+      processAndSetData(
+        quizData.title,
+        quizData.grid_size,
+        quizData.grid_data,
+        questionsData
+      );
+      setIsQuizLoaded(true);
+      setIsLoading(false);
+    };
+
+    const fetchTemplate = async (id: string) => {
+      setIsLoading(true);
+      const { data: templateData, error: templateError } = await supabase
+        .from("templates")
+        .select("title, grid_size, grid_data")
+        .eq("id", id)
+        .single();
+
+      if (templateError || !templateData) {
+        console.error("Erro ao carregar o template:", templateError);
+        router.push("/");
+        return;
+      }
+
+      const { data: questionsData, error: questionsError } = await supabase
+        .from("template_questions")
+        .select("color, question_text, answer")
+        .eq("template_id", id);
+
+      if (questionsError) {
+        console.error(
+          "Erro ao carregar as perguntas do template:",
+          questionsError
+        );
+        setIsLoading(false);
+        return;
+      }
+
+      processAndSetData(
+        templateData.title,
+        templateData.grid_size,
+        templateData.grid_data,
+        questionsData
+      );
+      setIsOwner(true);
+      setIsQuizLoaded(false); // É um novo quiz, então não está "carregado"
+      setIsLoading(false);
+    };
+
+    if (quizId) {
+      fetchQuiz(quizId);
+    } else if (templateId) {
+      fetchTemplate(templateId);
+    } else {
+      setIsOwner(true);
+      setIsLoading(false);
+    }
+  }, [supabase, searchParams, setHistoryState, router, user]);
+
+  // Efeito isolado para criar um grupo de cor inicial
   useEffect(() => {
-    if (
-      !isLoading &&
-      colorGroups.length === 0 &&
-      !searchParams.get("quiz_id")
-    ) {
+    const quizId = searchParams.get("quiz_id");
+    const templateId = searchParams.get("template_id");
+    if (!quizId && !templateId && colorGroups.length === 0 && !isLoading) {
       setColorGroups([
         {
           id: Date.now(),
@@ -85,7 +208,7 @@ function HomePageContent() {
         },
       ]);
     }
-  }, [isLoading, colorGroups.length, searchParams]);
+  }, [searchParams, colorGroups.length, isLoading]);
 
   useEffect(() => {
     setGridState(historyState);
@@ -116,10 +239,7 @@ function HomePageContent() {
 
   const clearAnswersFromGrid = (answersToClear: string[]) => {
     if (answersToClear.length === 0) return;
-
-    // Limpa o pincel se ele estiver ativo com uma das respostas removidas
     resetActiveToolIfNeeded(answersToClear);
-
     const answersSet = new Set(answersToClear);
     const newGridState = gridState.map((cell) =>
       answersSet.has(cell) ? "" : cell
@@ -129,6 +249,7 @@ function HomePageContent() {
   };
 
   const paintCells = (index: number) => {
+    if (!isOwner) return;
     setGridState((currentGrid) => {
       const newGridState = [...currentGrid];
       const startCol = index % gridSize;
@@ -150,7 +271,7 @@ function HomePageContent() {
   };
 
   const handleGridSizeChange = (newSize: number) => {
-    if (!isQuizLoaded) setGridSize(newSize);
+    if (!isQuizLoaded && isOwner) setGridSize(newSize);
   };
   const handleClearGrid = () => {
     if (window.confirm("Tem certeza?")) {
@@ -175,13 +296,17 @@ function HomePageContent() {
       setHistoryState(gridState);
   };
 
+  const onNewQuizSaved = (quizId: string) => {
+    router.push(`/?quiz_id=${quizId}`);
+  };
+
   if (isLoading) return <Spinner />;
 
   return (
     <div className="container mx-auto p-4 sm:p-6 lg:p-8">
       <header className="text-center mb-8">
         <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">
-          Gerador de Atividades "Pinte por Número"
+          Gerador de Atividades &quot;Pinte por Número&quot;
         </h1>
       </header>
       <div className="grid grid-cols-1 lg:grid-cols-[1fr] xl:grid-cols-[380px_1fr_320px] gap-6 items-start">
@@ -190,7 +315,7 @@ function HomePageContent() {
             <GridSizeSelector
               selectedSize={gridSize}
               onChange={handleGridSizeChange}
-              disabled={isQuizLoaded}
+              disabled={isQuizLoaded || !isOwner}
             />
             {isQuizLoaded && (
               <p className="text-xs text-gray-500 mt-2">
@@ -207,6 +332,7 @@ function HomePageContent() {
             setActiveTool={handleSetTool}
             activeTool={activeTool}
             clearAnswersFromGrid={clearAnswersFromGrid}
+            isOwner={isOwner}
           />
         </div>
         <div
@@ -237,6 +363,9 @@ function HomePageContent() {
           setBrushSize={setBrushSize}
           isEraserActive={isEraserActive}
           onSelectEraser={handleSetEraser}
+          quizId={currentQuizId}
+          isOwner={isOwner}
+          onNewQuizSaved={onNewQuizSaved}
         />
       </div>
     </div>

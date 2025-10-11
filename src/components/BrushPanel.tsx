@@ -10,6 +10,7 @@ interface BrushPanelProps {
   setBrushSize: (size: number) => void;
   isEraserActive: boolean;
   onSelectEraser: () => void;
+  disabled: boolean;
 }
 
 const BrushPanel = ({
@@ -18,6 +19,7 @@ const BrushPanel = ({
   setBrushSize,
   isEraserActive,
   onSelectEraser,
+  disabled,
 }: BrushPanelProps) => {
   const brushSizes = [1, 2, 3];
 
@@ -55,6 +57,7 @@ const BrushPanel = ({
 
           <button
             onClick={onSelectEraser}
+            disabled={disabled}
             className={`w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-md border-2 transition-colors ${
               isEraserActive
                 ? "bg-blue-600 border-blue-600 text-white"
@@ -90,6 +93,7 @@ const BrushPanel = ({
             <button
               key={size}
               onClick={() => setBrushSize(size)}
+              disabled={disabled}
               className={`w-10 h-10 rounded-md text-sm font-semibold border transition-colors ${
                 brushSize === size
                   ? "bg-blue-600 text-white border-blue-600"

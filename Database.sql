@@ -425,3 +425,82 @@ CREATE TABLE public.template_questions (
 );
 ALTER TABLE public.template_questions ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Template questions are viewable by everyone." ON public.template_questions FOR SELECT USING (true);
+
+-- PASSO 1: Adicionar a coluna para guardar a grelha na tabela de templates
+ALTER TABLE public.templates
+ADD COLUMN grid_data jsonb NULL;
+
+-- PASSO 2: Apagar os templates antigos para recriá-los com a grelha
+-- (É mais seguro do que tentar fazer UPDATE em múltiplas tabelas)
+DELETE FROM public.templates WHERE id IN (
+  '10101010-0001-0001-0001-000000000001',
+  '15151515-0002-0002-0002-000000000002',
+  '20202020-0003-0003-0003-000000000003'
+);
+
+
+-- PASSO 3: Inserir novamente os templates com os dados da grelha (grid_data)
+
+-- Template 1: Foguete da Tabuada (10x10)
+INSERT INTO public.templates (id, title, description, grid_size, grid_data)
+VALUES (
+  '10101010-0001-0001-0001-000000000001',
+  'Foguete da Tabuada',
+  'Pratique a tabuada do 7 e 8 para colorir um foguete e prepará-lo para o lançamento!',
+  10,
+  '["","","","","49","49","","","","","","","","49","56","56","49","","","","","","49","56","64","64","56","49","","","","72","56","64","64","56","72","","","40","72","56","64","64","56","72","40","","40","40","72","64","64","72","40","40","","","","","48","45","48","","","","","","","","48","45","48","","","","","","","63","48","45","48","63","","","","","63","63","63","63","63","63","",""]'::jsonb
+);
+
+-- Perguntas do Foguete
+INSERT INTO public.template_questions (template_id, color, question_text, answer)
+VALUES
+  ('10101010-0001-0001-0001-000000000001', '{"name": "Vermelho", "value": "#FF0000"}', '7 x 7', '49'),
+  ('10101010-0001-0001-0001-000000000001', '{"name": "Vermelho", "value": "#FF0000"}', '8 x 7', '56'),
+  ('10101010-0001-0001-0001-000000000001', '{"name": "Laranja", "value": "#FFA500"}', '6 x 8', '48'),
+  ('10101010-0001-0001-0001-000000000001', '{"name": "Laranja", "value": "#FFA500"}', '9 x 5', '45'),
+  ('10101010-0001-0001-0001-000000000001', '{"name": "Cinzento", "value": "#808080"}', '8 x 8', '64'),
+  ('10101010-0001-0001-0001-000000000001', '{"name": "Cinzento", "value": "#808080"}', '7 x 6', '42'),
+  ('10101010-0001-0001-0001-000000000001', '{"name": "Prata", "value": "#C0C0C0"}', '9 x 8', '72'),
+  ('10101010-0001-0001-0001-000000000001', '{"name": "Prata", "value": "#C0C0C0"}', '8 x 5', '40'),
+  ('10101010-0001-0001-0001-000000000001', '{"name": "Azul Céu", "value": "#87CEEB"}', '7 x 9', '63');
+
+-- Template 2: Pirâmide de Gizé (15x15)
+INSERT INTO public.templates (id, title, description, grid_size, grid_data)
+VALUES (
+  '15151515-0002-0002-0002-000000000002',
+  'Mistérios do Egito Antigo',
+  'Responda perguntas sobre o Egito Antigo para revelar uma das grandes pirâmides.',
+  15,
+  '["Anúbis","Anúbis","Anúbis","Anúbis","Anúbis","Anúbis","Anúbis","Rá","Anúbis","Anúbis","Anúbis","Anúbis","Anúbis","Anúbis","Anúbis","Nilo","Nilo","Nilo","Nilo","Nilo","Nilo","Hieróglifos","Hieróglifos","Hieróglifos","Nilo","Nilo","Nilo","Nilo","Nilo","Nilo","Nilo","Nilo","Nilo","Nilo","Nilo","Nilo","Hieróglifos","Faraó","Faraó","Hieróglifos","Nilo","Nilo","Nilo","Nilo","Nilo","Nilo","Nilo","Nilo","Nilo","Nilo","Nilo","Hieróglifos","Faraó","Faraó","Faraó","Hieróglifos","Nilo","Nilo","Nilo","Nilo","Nilo","Nilo","Nilo","Nilo","Nilo","Nilo","Hieróglifos","Faraó","Faraó","Faraó","Faraó","Hieróglifos","Nilo","Nilo","Nilo","Nilo","Nilo","Nilo","Nilo","Nilo","Nilo","Hieróglifos","Faraó","Faraó","Faraó","Faraó","Faraó","Hieróglifos","Nilo","Nilo","Nilo","Nilo","Nilo","Nilo","Nilo","Nilo","Hieróglifos","Faraó","Faraó","Faraó","Faraó","Faraó","Faraó","Hieróglifos","Nilo","Nilo","Nilo","Nilo","Nilo","Nilo","Nilo","Hieróglifos","Mumificação","Mumificação","Mumificação","Mumificação","Mumificação","Mumificação","Mumificação","Hieróglifos","Nilo","Nilo","Nilo","Nilo","Nilo","Nilo","Hieróglifos","Mumificação","Tutancâmon","Tutancâmon","Tutancâmon","Tutancâmon","Tutancâmon","Tutancâmon","Mumificação","Hieróglifos","Nilo","Nilo","Nilo","Nilo","Hieróglifos","Mumificação","Tutancâmon","Tutancâmon","Tutancâmon","Tutancâmon","Tutancâmon","Tutancâmon","Tutancâmon","Mumificação","Hieróglifos","Nilo","Nilo","Hieróglifos","Mumificação","Tutancâmon","Tutancâmon","Tutancâmon","Tutancâmon","Tutancâmon","Tutancâmon","Tutancâmon","Tutancâmon","Mumificação","Hieróglifos","Nilo","Tutancâmon","Tutancâmon","Tutancâmon","Tutancâmon","Tutancâmon","Tutancâmon","Tutancâmon","Tutancâmon","Tutancâmon","Tutancâmon","Tutancâmon","Tutancâmon","Tutancâmon","Tutancâmon","Tutancâmon","Tutancâmon","Tutancâmon","Tutancâmon","Tutancâmon","Tutancâmon","Tutancâmon","Tutancâmon","Tutancâmon","Tutancâmon","Tutancâmon","Tutancâmon","Tutancâmon","Tutancâmon","Tutancâmon","Tutancâmon","Tutancâmon","Tutancâmon","Tutancâmon","Tutancâmon","Tutancâmon","Tutancâmon","Tutancâmon","Tutancâmon","Tutancâmon","Tutancâmon"]'::jsonb
+);
+
+-- Perguntas da Pirâmide
+INSERT INTO public.template_questions (template_id, color, question_text, answer)
+VALUES
+  ('15151515-0002-0002-0002-000000000002', '{"name": "Amarelo", "value": "#FFFF00"}', 'Como era chamada a escrita sagrada dos egípcios?', 'Hieróglifos'),
+  ('15151515-0002-0002-0002-000000000002', '{"name": "Amarelo", "value": "#FFFF00"}', 'Qual o título dado ao governante do Egito Antigo?', 'Faraó'),
+  ('15151515-0002-0002-0002-000000000002', '{"name": "Amarelo", "value": "#FFFF00"}', 'Processo de preservação dos corpos para a vida após a morte.', 'Mumificação'),
+  ('15151515-0002-0002-0002-000000000002', '{"name": "Castanho", "value": "#A52A2A"}', 'Principal rio que garantia a sobrevivência da civilização egípcia.', 'Nilo'),
+  ('15151515-0002-0002-0002-000000000002', '{"name": "Castanho", "value": "#A52A2A"}', 'Famoso faraó jovem cuja tumba foi descoberta em 1922.', 'Tutancâmon'),
+  ('15151515-0002-0002-0002-000000000002', '{"name": "Azul Céu", "value": "#87CEEB"}', 'Deus dos mortos com cabeça de chacal.', 'Anúbis'),
+  ('15151515-0002-0002-0002-000000000002', '{"name": "Azul Céu", "value": "#87CEEB"}', 'Deus do Sol, a principal divindade egípcia.', 'Rá');
+
+-- Template 3: Hélice de DNA (20x20)
+INSERT INTO public.templates (id, title, description, grid_size, grid_data)
+VALUES (
+  '20202020-0003-0003-0003-000000000003',
+  'O Código da Vida: DNA',
+  'Teste seus conhecimentos em genética para construir e colorir a molécula da vida.',
+  20,
+  '["","","","","","","Guanina","Dupla Hélice","Timina","","","","","","","","","","","","","","","","","Guanina","Dupla Hélice","Dupla Hélice","Timina","","","","","","","","","","","","","","","","Guanina","Dupla Hélice","Timina","Uracila","Uracila","Timina","","","","","","","","","","","","","Guanina","Dupla Hélice","Timina","Uracila","Uracila","Uracila","Timina","","","","","","","","","","","","Guanina","Dupla Hélice","Timina","Códon","Uracila","Uracila","Códon","Timina","","","","","","","","","","Guanina","Dupla Hélice","Timina","Códon","Códon","Códon","Códon","Códon","Timina","","","","","","","","","","Guanina","Dupla Hélice","Timina","Desoxirribose","Códon","Códon","Desoxirribose","Timina","","","","","","","","","","Guanina","Dupla Hélice","Timina","Desoxirribose","Desoxirribose","Desoxirribose","Desoxirribose","Timina","","","","","","","","","","","","Timina","Dupla Hélice","Guanina","Desoxirribose","Desoxirribose","Guanina","","","","","","","","","","","","Timina","Dupla Hélice","Dupla Hélice","Guanina","Guanina","","","","","","","","","","","","Timina","Dupla Hélice","Guanina","Uracila","Uracila","Guanina","","","","","","","","","","","Timina","Dupla Hélice","Guanina","Uracila","Uracila","Uracila","Guanina","","","","","","","","","","Timina","Dupla Hélice","Guanina","Códon","Uracila","Uracila","Códon","Guanina","","","","","","","","","","Timina","Dupla Hélice","Guanina","Códon","Códon","Códon","Códon","Guanina","","","","","","","","","Timina","Dupla Hélice","Guanina","Desoxirribose","Códon","Códon","Desoxirribose","Guanina","","","","","","","","","Timina","Dupla Hélice","Guanina","Desoxirribose","Desoxirribose","Desoxirribose","Guanina","","","","","","","","","","Timina","Dupla Hélice","Dupla Hélice","Guanina","","","","","","","","","","","","","","","","Guanina","Dupla Hélice","Timina","","","","","","","","","","","","","","","","","Guanina","Dupla Hélice","Timina","","","","","","","","","","","","","","","","","","","Guanina","Dupla Hélice","Timina","","","","","","",""]'::jsonb
+);
+
+-- Perguntas do DNA
+INSERT INTO public.template_questions (template_id, color, question_text, answer)
+VALUES
+  ('20202020-0003-0003-0003-000000000003', '{"name": "Azul", "value": "#0000FF"}', 'No DNA, a Adenina (A) sempre se pareia com a...', 'Timina'),
+  ('20202020-0003-0003-0003-000000000003', '{"name": "Azul", "value": "#0000FF"}', 'Qual o nome do açúcar que compõe o DNA?', 'Desoxirribose'),
+  ('20202020-0003-0003-0003-000000000003', '{"name": "Verde", "value": "#008000"}', 'No DNA, a Citosina (C) sempre se pareia com a...', 'Guanina'),
+  ('20202020-0003-0003-0003-000000000003', '{"name": "Verde", "value": "#008000"}', 'O formato da molécula de DNA é conhecido como...', 'Dupla Hélice'),
+  ('20202020-0003-0003-0003-000000000003', '{"name": "Vermelho", "value": "#FF0000"}', 'No RNA, qual base substitui a Timina?', 'Uracila'),
+  ('20202020-0003-0003-0003-000000000003', '{"name": "Amarelo", "value": "#FFFF00"}', 'Uma sequência de três bases nitrogenadas que codifica um aminoácido é chamada de...', 'Códon');

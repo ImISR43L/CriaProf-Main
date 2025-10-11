@@ -2,9 +2,10 @@
 "use client";
 
 import React, { useState } from "react";
-import type { ColorGroup } from "@/lib/types"; 
+import type { ColorGroup } from "@/lib/types";
 import { generatePdf } from "@/lib/pdfGenerator";
 import { useSupabase } from "@/components/AuthProvider";
+import { useRouter } from "next/navigation";
 
 interface ActionsPanelProps {
   onClearGrid: () => void;
@@ -12,6 +13,8 @@ interface ActionsPanelProps {
   colorGroups: ColorGroup[];
   gridState: string[];
   gridSize: number;
+  quizId: string | null;
+  onNewQuizSaved: (quizId: string) => void;
 }
 
 const ActionsPanel = ({
@@ -20,10 +23,13 @@ const ActionsPanel = ({
   colorGroups,
   gridState,
   gridSize,
+  quizId,
+  onNewQuizSaved,
 }: ActionsPanelProps) => {
   const { supabase, user } = useSupabase();
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState("");
+  const router = useRouter();
 
   const handleGeneratePdf = () => {
     generatePdf(activityTitle, colorGroups, gridState, gridSize);
@@ -38,47 +44,81 @@ const ActionsPanel = ({
     setIsSaving(true);
     setMessage("");
 
-    const { data: quizData, error: quizError } = await supabase
-      .from("quizzes")
-      .insert({
-        title: activityTitle,
-        grid_data: gridState,
-        grid_size: gridSize,
-        user_id: user.id,
-      })
-      .select()
-      .single();
-
-    if (quizError) {
-      setMessage(`Erro ao salvar: ${quizError.message}`);
-      setIsSaving(false);
-      return;
-    }
-
     const questionsToInsert = colorGroups.flatMap((group) =>
       group.questions
         .filter((q) => q.text && q.answer)
         .map((q) => ({
-          quiz_id: quizData.id,
-          color: group.color,
+          quiz_id: quizId,
+          color: JSON.stringify(group.color),
           question_text: q.text,
           answer: q.answer,
         }))
     );
 
-    if (questionsToInsert.length > 0) {
-      const { error: questionsError } = await supabase
-        .from("questions")
-        .insert(questionsToInsert);
+    if (quizId) {
+      // ATUALIZAR QUESTIONÁRIO EXISTENTE
+      const { error: quizError } = await supabase
+        .from("quizzes")
+        .update({
+          title: activityTitle,
+          grid_data: gridState,
+        })
+        .eq("id", quizId);
 
-      if (questionsError) {
-        setMessage(`Erro ao salvar perguntas: ${questionsError.message}`);
+      if (quizError) {
+        setMessage(`Erro ao atualizar: ${quizError.message}`);
         setIsSaving(false);
         return;
       }
+
+      await supabase.from("questions").delete().eq("quiz_id", quizId);
+
+      if (questionsToInsert.length > 0) {
+        const { error: questionsError } = await supabase
+          .from("questions")
+          .insert(questionsToInsert.map((q) => ({ ...q, quiz_id: quizId })));
+        if (questionsError) {
+          setMessage(`Erro ao salvar perguntas: ${questionsError.message}`);
+          setIsSaving(false);
+          return;
+        }
+      }
+      setMessage("Questionário atualizado com sucesso!");
+    } else {
+      // CRIAR NOVO QUESTIONÁRIO
+      const { data: quizData, error: quizError } = await supabase
+        .from("quizzes")
+        .insert({
+          title: activityTitle,
+          grid_data: gridState,
+          grid_size: gridSize,
+          user_id: user.id,
+        })
+        .select()
+        .single();
+
+      if (quizError) {
+        setMessage(`Erro ao salvar: ${quizError.message}`);
+        setIsSaving(false);
+        return;
+      }
+
+      if (questionsToInsert.length > 0) {
+        const { error: questionsError } = await supabase
+          .from("questions")
+          .insert(
+            questionsToInsert.map((q) => ({ ...q, quiz_id: quizData.id }))
+          );
+        if (questionsError) {
+          setMessage(`Erro ao salvar perguntas: ${questionsError.message}`);
+          setIsSaving(false);
+          return;
+        }
+      }
+      setMessage("Questionário salvo com sucesso!");
+      onNewQuizSaved(quizData.id);
     }
 
-    setMessage("Questionário salvo com sucesso!");
     setIsSaving(false);
     setTimeout(() => setMessage(""), 3000);
   };
@@ -93,7 +133,11 @@ const ActionsPanel = ({
             disabled={isSaving}
             className="w-full bg-blue-600 text-white font-bold py-3 rounded-md hover:bg-blue-700 transition-colors disabled:bg-blue-400"
           >
-            {isSaving ? "A Salvar..." : "Salvar Questionário"}
+            {isSaving
+              ? "A Salvar..."
+              : quizId
+              ? "Salvar Alterações"
+              : "Salvar Questionário"}
           </button>
         )}
         <button

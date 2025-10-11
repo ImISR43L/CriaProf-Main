@@ -4,7 +4,6 @@
 import React from "react";
 import ActionsPanel from "./ActionsPanel";
 import BrushPanel from "./BrushPanel";
-import GridSizeSelector from "./GridSizeSelector";
 import type { ColorGroup, ActiveTool } from "@/lib/types";
 
 interface ToolPanelProps {
@@ -16,29 +15,35 @@ interface ToolPanelProps {
   activeTool: ActiveTool | null;
   brushSize: number;
   setBrushSize: (size: number) => void;
-  isEraserActive: boolean; // Nova prop
-  onSelectEraser: () => void; // Nova prop
+  isEraserActive: boolean;
+  onSelectEraser: () => void;
+  quizId: string | null;
+  isOwner: boolean;
+  onNewQuizSaved: (quizId: string) => void;
 }
 
 const ToolPanel = (props: ToolPanelProps) => {
-  // A prop handleGridSizeChange foi removida pois não é mais passada
   return (
     <div className="space-y-6">
-      {/* O GridSizeSelector já não está aqui */}
       <BrushPanel
         activeTool={props.activeTool}
         brushSize={props.brushSize}
         setBrushSize={props.setBrushSize}
         isEraserActive={props.isEraserActive}
         onSelectEraser={props.onSelectEraser}
+        disabled={!props.isOwner}
       />
-      <ActionsPanel
-        onClearGrid={props.onClearGrid}
-        activityTitle={props.activityTitle}
-        colorGroups={props.colorGroups}
-        gridState={props.gridState}
-        gridSize={props.gridSize}
-      />
+      {props.isOwner && (
+        <ActionsPanel
+          onClearGrid={props.onClearGrid}
+          activityTitle={props.activityTitle}
+          colorGroups={props.colorGroups}
+          gridState={props.gridState}
+          gridSize={props.gridSize}
+          quizId={props.quizId}
+          onNewQuizSaved={props.onNewQuizSaved}
+        />
+      )}
     </div>
   );
 };
