@@ -1,20 +1,22 @@
+// src/app/templates/page.tsx
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import Spinner from "@/components/Spinner";
 
-// Interfaces para os dados
 interface TemplateCategory {
   id: string;
   name: string;
 }
+
+// CORREÇÃO: A interface agora espera que template_categories seja um array de objetos.
 interface Template {
   id: string;
   title: string;
   description: string;
   grid_size: number;
-  template_categories: { name: string } | null;
+  template_categories: { name: string }[] | null;
 }
 
 export default function TemplatesPage() {
@@ -30,17 +32,15 @@ export default function TemplatesPage() {
     const fetchFiltersAndTemplates = async () => {
       setLoading(true);
 
-      // Carregar as categorias para o dropdown de filtro
       const { data: categoriesData } = await supabase
         .from("template_categories")
         .select("id, name")
         .order("order_index");
       if (categoriesData) setCategories(categoriesData);
 
-      // Construir a query para buscar os templates
       let query = supabase
         .from("templates")
-        .select("id, title, description, grid_size, template_categories(name)") // Faz um "join" para buscar o nome da categoria
+        .select("id, title, description, grid_size, template_categories(name)")
         .order("created_at", { ascending: false });
 
       if (selectedGridSize !== "all") {
@@ -73,7 +73,6 @@ export default function TemplatesPage() {
         </p>
       </div>
 
-      {/* Filtros */}
       <div className="flex flex-col sm:flex-row justify-center items-center gap-4 mb-8 p-4 bg-white rounded-lg shadow-sm border">
         <div className="w-full sm:w-auto">
           <label
@@ -118,7 +117,6 @@ export default function TemplatesPage() {
         </div>
       </div>
 
-      {/* Lista de Templates */}
       {templates.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {templates.map((template) => (
@@ -127,7 +125,8 @@ export default function TemplatesPage() {
               className="bg-white border border-gray-200 rounded-lg shadow-md p-6 flex flex-col transition-transform hover:scale-105"
             >
               <span className="text-xs font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded-full self-start mb-2">
-                {template.template_categories?.name || "Sem Categoria"}
+                {/* CORREÇÃO: Aceder ao primeiro elemento do array de categorias */}
+                {template.template_categories?.[0]?.name || "Sem Categoria"}
               </span>
               <h2 className="font-bold text-xl text-gray-900 mb-2">
                 {template.title}

@@ -1,151 +1,132 @@
-// src/app/templates/page.tsx
+// src/app/admin/templates/page.tsx
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
+import { useSupabase } from "@/components/AuthProvider";
 import Spinner from "@/components/Spinner";
 
-interface TemplateCategory {
-  id: string;
-  name: string;
-}
-
-// CORREÇÃO: A interface agora espera que template_categories seja um array de objetos.
 interface Template {
   id: string;
   title: string;
-  description: string;
-  grid_size: number;
-  template_categories: { name: string }[] | null;
+  created_at: string;
 }
 
-export default function TemplatesPage() {
+export default function AdminTemplatesPage() {
+  const { supabase, profile } = useSupabase();
+  const router = useRouter();
   const [templates, setTemplates] = useState<Template[]>([]);
-  const [categories, setCategories] = useState<TemplateCategory[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedGridSize, setSelectedGridSize] = useState<string>("all");
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("all");
-
-  const supabase = createClient();
 
   useEffect(() => {
-    const fetchFiltersAndTemplates = async () => {
-      setLoading(true);
+    if (profile && profile.role !== "admin") {
+      router.push("/");
+    }
+  }, [profile, router]);
 
-      const { data: categoriesData } = await supabase
-        .from("template_categories")
-        .select("id, name")
-        .order("order_index");
-      if (categoriesData) setCategories(categoriesData);
+  const fetchTemplates = useCallback(async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("templates")
+      .select("id, title, created_at")
+      .order("created_at", { ascending: false });
 
-      let query = supabase
+    if (data) setTemplates(data);
+    if (error) console.error("Erro ao buscar templates:", error);
+    setLoading(false);
+  }, [supabase]);
+
+  useEffect(() => {
+    if (profile?.role === "admin") {
+      fetchTemplates();
+    }
+  }, [profile, fetchTemplates]);
+
+  const handleDeleteTemplate = async (templateId: string) => {
+    if (
+      window.confirm(
+        "Tem certeza que deseja apagar este template? As atividades de usuários baseadas nele não serão afetadas, mas o template será removido permanentemente."
+      )
+    ) {
+      const { error } = await supabase
         .from("templates")
-        .select("id, title, description, grid_size, template_categories(name)")
-        .order("created_at", { ascending: false });
-
-      if (selectedGridSize !== "all") {
-        query = query.eq("grid_size", parseInt(selectedGridSize));
+        .delete()
+        .eq("id", templateId);
+      if (!error) {
+        setTemplates(templates.filter((t) => t.id !== templateId));
+      } else {
+        alert(`Erro ao apagar o template: ${error.message}`);
       }
+    }
+  };
 
-      if (selectedCategoryId !== "all") {
-        query = query.eq("category_id", selectedCategoryId);
-      }
-
-      const { data, error } = await query;
-      if (data) setTemplates(data as Template[]);
-      if (error) console.error("Erro ao buscar templates:", error);
-
-      setLoading(false);
-    };
-    fetchFiltersAndTemplates();
-  }, [supabase, selectedGridSize, selectedCategoryId]);
-
-  if (loading) return <Spinner />;
+  if (loading || !profile || profile.role !== "admin") {
+    return <Spinner />;
+  }
 
   return (
     <div className="container mx-auto p-8">
-      <div className="text-center mb-10">
-        <h1 className="text-4xl font-bold text-gray-900">
-          Galeria de Templates
-        </h1>
-        <p className="text-lg text-gray-600 mt-2">
-          Escolha um modelo abaixo para começar rapidamente!
-        </p>
-      </div>
-
-      <div className="flex flex-col sm:flex-row justify-center items-center gap-4 mb-8 p-4 bg-white rounded-lg shadow-sm border">
-        <div className="w-full sm:w-auto">
-          <label
-            htmlFor="gridSize"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Tamanho da Grade
-          </label>
-          <select
-            id="gridSize"
-            value={selectedGridSize}
-            onChange={(e) => setSelectedGridSize(e.target.value)}
-            className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
-          >
-            <option value="all">Todos</option>
-            <option value="10">10x10</option>
-            <option value="15">15x15</option>
-            <option value="20">20x20</option>
-          </select>
-        </div>
-
-        <div className="w-full sm:w-auto">
-          <label
-            htmlFor="category"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Disciplina
-          </label>
-          <select
-            id="category"
-            value={selectedCategoryId}
-            onChange={(e) => setSelectedCategoryId(e.target.value)}
-            className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
-          >
-            <option value="all">Todas</option>
-            {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.name}
-              </option>
-            ))}
-          </select>
-        </div>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold text-gray-900">Gerir Templates</h1>
+        <Link
+          href="/admin/templates/editor/new"
+          className="py-2 px-4 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 transition-colors"
+        >
+          + Criar Novo Template
+        </Link>
       </div>
 
       {templates.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {templates.map((template) => (
-            <div
-              key={template.id}
-              className="bg-white border border-gray-200 rounded-lg shadow-md p-6 flex flex-col transition-transform hover:scale-105"
-            >
-              <span className="text-xs font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded-full self-start mb-2">
-                {/* CORREÇÃO: Aceder ao primeiro elemento do array de categorias */}
-                {template.template_categories?.[0]?.name || "Sem Categoria"}
-              </span>
-              <h2 className="font-bold text-xl text-gray-900 mb-2">
-                {template.title}
-              </h2>
-              <p className="text-gray-600 flex-grow mb-4 text-sm">
-                {template.description}
-              </p>
-              <Link
-                href={`/?template_id=${template.id}`}
-                className="mt-auto text-center w-full py-2 px-4 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 transition-colors"
+        <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+          <ul>
+            {templates.map((template) => (
+              <li
+                key={template.id}
+                className="border-b last:border-b-0 py-4 flex justify-between items-center flex-wrap gap-4"
               >
-                Usar este Template
-              </Link>
-            </div>
-          ))}
+                <div>
+                  <h2 className="font-bold text-lg text-gray-900">
+                    {template.title}
+                  </h2>
+                  <p className="text-sm text-gray-500">
+                    Criado em:{" "}
+                    {new Date(template.created_at).toLocaleDateString("pt-BR")}
+                  </p>
+                </div>
+                <div className="flex items-center gap-4">
+                  <Link
+                    href={`/admin/templates/editor/${template.id}`}
+                    className="text-blue-600 font-semibold hover:underline px-2"
+                  >
+                    Editar
+                  </Link>
+                  <button
+                    onClick={() => handleDeleteTemplate(template.id)}
+                    className="text-red-500 hover:text-red-700 p-2"
+                    title="Apagar Template"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
         </div>
       ) : (
         <p className="text-center text-gray-500 mt-10">
-          Nenhum template encontrado com os filtros selecionados.
+          Nenhum template encontrado. Clique em &quot;Criar Novo Template&quot;
+          para começar.
         </p>
       )}
     </div>
