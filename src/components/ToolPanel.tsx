@@ -1,3 +1,4 @@
+// src/components/ToolPanel.tsx
 "use client";
 
 import React from "react";
@@ -41,6 +42,7 @@ const ToolPanel = (props: ToolPanelProps) => {
           gridSize={props.gridSize}
           quizId={props.quizId}
           onNewQuizSaved={props.onNewQuizSaved}
+          isOwner={props.isOwner}
         />
       )}
     </div>

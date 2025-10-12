@@ -10,7 +10,7 @@ interface TemplateCategory {
   name: string;
 }
 
-// CORREÇÃO: A interface agora espera que template_categories seja um array de objetos.
+// CORREÇÃO FINAL: A interface agora espera que template_categories seja um array de objetos ou nulo.
 interface Template {
   id: string;
   title: string;
@@ -125,7 +125,6 @@ export default function TemplatesPage() {
               className="bg-white border border-gray-200 rounded-lg shadow-md p-6 flex flex-col transition-transform hover:scale-105"
             >
               <span className="text-xs font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded-full self-start mb-2">
-                {/* CORREÇÃO: Aceder ao primeiro elemento do array de categorias */}
                 {template.template_categories?.[0]?.name || "Sem Categoria"}
               </span>
               <h2 className="font-bold text-xl text-gray-900 mb-2">
