@@ -1,5 +1,3 @@
-// src/lib/colors.ts
-
 export interface SchoolColor {
   name: string;
   value: string;

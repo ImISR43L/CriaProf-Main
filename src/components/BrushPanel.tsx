@@ -1,4 +1,3 @@
-// src/components/BrushPanel.tsx
 "use client";
 import React from "react";
 import type { ActiveTool } from "@/lib/types";

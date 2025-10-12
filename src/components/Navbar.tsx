@@ -1,4 +1,3 @@
-// src/components/Navbar.tsx
 "use client";
 import React from "react";
 import Link from "next/link";
@@ -64,14 +63,12 @@ const Navbar = () => {
             >
               Notícias
             </Link>{" "}
-            {/* ADICIONADO */}
             <Link
               href="/roadmap"
               className="text-sm text-gray-600 hover:text-blue-600"
             >
               Roadmap
             </Link>{" "}
-            {/* ADICIONADO */}
             <Link
               href="/about"
               className="text-sm text-gray-600 hover:text-blue-600"

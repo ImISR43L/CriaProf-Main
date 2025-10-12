@@ -18,9 +18,7 @@ export default function AdminTemplatesPage() {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Proteção da página: Apenas administradores podem aceder
   useEffect(() => {
-    // Se o perfil já carregou e não é admin, redireciona
     if (profile && profile.role !== "admin") {
       router.push("/");
     }
@@ -39,7 +37,6 @@ export default function AdminTemplatesPage() {
   }, [supabase]);
 
   useEffect(() => {
-    // Só busca os dados se o perfil for de admin
     if (profile?.role === "admin") {
       fetchTemplates();
     }
@@ -63,7 +60,6 @@ export default function AdminTemplatesPage() {
     }
   };
 
-  // Mostra um spinner enquanto o perfil carrega ou se o utilizador não for admin
   if (loading || !profile || profile.role !== "admin") {
     return <Spinner />;
   }
@@ -129,8 +125,8 @@ export default function AdminTemplatesPage() {
         </div>
       ) : (
         <p className="text-center text-gray-500 mt-10">
-          Nenhum template encontrado. Clique em "Criar Novo Template" para
-          começar.
+          Nenhum template encontrado. Clique em &quot;Criar Novo Template&quot;
+          para começar.
         </p>
       )}
     </div>

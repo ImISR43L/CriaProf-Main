@@ -1,4 +1,3 @@
-// src/components/ColorBlock.tsx
 import React, { useState, useRef, useEffect } from "react";
 import type { ColorGroup, Question, ActiveTool } from "@/lib/types";
 import { schoolColorPalette } from "@/lib/colors";

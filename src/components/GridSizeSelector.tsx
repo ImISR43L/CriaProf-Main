@@ -1,4 +1,3 @@
-// src/components/GridSizeSelector.tsx
 "use client";
 import React from "react";
 
@@ -17,9 +16,7 @@ const GridSizeSelector = ({
   return (
     <div>
       {/* Título padronizado */}
-      <h2 className="text-xl font-bold text-gray-900 mb-4">
-        Tamanho da Grade
-      </h2>
+      <h2 className="text-xl font-bold text-gray-900 mb-4">Tamanho da Grade</h2>
       <div className="flex gap-2">
         {sizes.map((size) => (
           <button

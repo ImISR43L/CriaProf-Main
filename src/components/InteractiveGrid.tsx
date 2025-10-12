@@ -1,7 +1,6 @@
-// src/components/InteractiveGrid.tsx
 import React from "react";
 import type { ColorGroup } from "@/lib/types";
-import { getContrastColor } from "@/lib/utils"; // Importar a nossa nova função
+import { getContrastColor } from "@/lib/utils";
 
 interface InteractiveGridProps {
   gridState: string[];
@@ -45,10 +44,10 @@ const InteractiveGrid = ({
         style={{ ...gridStyles, aspectRatio: "1 / 1" }}
       >
         {gridState.map((cellValue, index) => {
-          const bgColor = answerToColorMap.get(cellValue) || '#FFFFFF';
+          const bgColor = answerToColorMap.get(cellValue) || "#FFFFFF";
           // Usar a nossa função para obter a cor de texto com melhor contraste
           const textColor = getContrastColor(bgColor);
-          
+
           return (
             <div
               key={index}
@@ -59,9 +58,9 @@ const InteractiveGrid = ({
                 }
               }}
               className="w-full h-full text-center text-sm p-0 border-r border-b border-gray-400 select-none cursor-pointer flex items-center justify-center"
-              style={{ 
-                  backgroundColor: bgColor,
-                  color: textColor 
+              style={{
+                backgroundColor: bgColor,
+                color: textColor,
               }}
             >
               {cellValue}

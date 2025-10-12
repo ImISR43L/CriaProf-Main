@@ -1,9 +1,8 @@
-// src/app/login/page.tsx
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Eye, EyeSlash } from "@/components/Icons"; // Voltamos a usar o alias @/
+import { Eye, EyeSlash } from "@/components/Icons";
 import Spinner from "@/components/Spinner";
 
 export default function LoginPage() {

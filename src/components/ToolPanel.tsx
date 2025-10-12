@@ -1,4 +1,3 @@
-// src/components/ToolPanel.tsx
 "use client";
 
 import React from "react";

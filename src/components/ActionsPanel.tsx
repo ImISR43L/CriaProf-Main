@@ -5,7 +5,6 @@ import React, { useState } from "react";
 import type { ColorGroup } from "@/lib/types";
 import { generatePdf } from "@/lib/pdfGenerator";
 import { useSupabase } from "@/components/AuthProvider";
-import { useRouter } from "next/navigation";
 
 interface ActionsPanelProps {
   onClearGrid: () => void;
@@ -15,6 +14,7 @@ interface ActionsPanelProps {
   gridSize: number;
   quizId: string | null;
   onNewQuizSaved: (quizId: string) => void;
+  isOwner: boolean;
 }
 
 const ActionsPanel = ({
@@ -25,11 +25,11 @@ const ActionsPanel = ({
   gridSize,
   quizId,
   onNewQuizSaved,
+  isOwner,
 }: ActionsPanelProps) => {
   const { supabase, user } = useSupabase();
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState("");
-  const router = useRouter();
 
   const handleGeneratePdf = () => {
     generatePdf(activityTitle, colorGroups, gridState, gridSize);
@@ -127,7 +127,7 @@ const ActionsPanel = ({
     <aside className="bg-white p-5 rounded-lg shadow-md h-fit border border-gray-200">
       <h2 className="text-xl font-bold text-gray-900 mb-4">Ações</h2>
       <div className="space-y-3">
-        {user && (
+        {user && isOwner && (
           <button
             onClick={handleSaveQuiz}
             disabled={isSaving}
@@ -146,12 +146,14 @@ const ActionsPanel = ({
         >
           Gerar PDF
         </button>
-        <button
-          onClick={onClearGrid}
-          className="w-full bg-gray-500 text-white font-bold py-3 rounded-md hover:bg-gray-600 transition-colors"
-        >
-          Limpar Grade
-        </button>
+        {isOwner && (
+          <button
+            onClick={onClearGrid}
+            className="w-full bg-gray-500 text-white font-bold py-3 rounded-md hover:bg-gray-600 transition-colors"
+          >
+            Limpar Grade
+          </button>
+        )}
         {message && (
           <p className="text-sm text-center text-green-600 mt-2">{message}</p>
         )}

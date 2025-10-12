@@ -42,10 +42,10 @@ export default function AboutPage() {
         )}
       </div>
       <p className="text-lg text-gray-700 mb-6">
-        Bem-vindo ao Gerador de Atividades "Pinte por Número"! Esta ferramenta
-        foi criada com o objetivo de fornecer aos educadores um recurso simples,
-        gratuito e poderoso para criar atividades personalizadas e envolventes
-        para seus alunos.
+        Bem-vindo ao Gerador de Atividades &quot;Pinte por Número&quot;! Esta
+        ferramenta foi criada com o objetivo de fornecer aos educadores um
+        recurso simples, gratuito e poderoso para criar atividades
+        personalizadas e envolventes para seus alunos.
       </p>
 
       <div className="bg-white p-8 rounded-lg shadow-md border border-gray-200">

@@ -4,13 +4,11 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { User, SupabaseClient } from "@supabase/supabase-js";
 
-// Tipos para os dados do perfil que vamos carregar
 type Profile = {
   full_name: string | null;
   role: string | null;
 };
 
-// Adiciona o perfil ao contexto
 type SupabaseContext = {
   supabase: SupabaseClient;
   user: User | null;
@@ -38,7 +36,6 @@ export default function AuthProvider({
       setProfile(data as Profile | null);
     };
 
-    // Função para obter a sessão e o perfil no carregamento inicial
     const getCurrentSession = async () => {
       const {
         data: { session },
@@ -50,7 +47,6 @@ export default function AuthProvider({
     };
     getCurrentSession();
 
-    // Ouve as alterações no estado de autenticação
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
@@ -73,7 +69,7 @@ export default function AuthProvider({
 }
 
 export const useSupabase = () => {
-  let context = useContext(Context);
+  const context = useContext(Context);
   if (context === undefined) {
     throw new Error("useSupabase must be used inside AuthProvider");
   }

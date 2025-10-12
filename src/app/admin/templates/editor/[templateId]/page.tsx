@@ -12,7 +12,6 @@ import BrushPanel from "@/components/BrushPanel";
 import GridSizeSelector from "@/components/GridSizeSelector";
 import { useHistory } from "@/hooks/useHistory";
 
-// Nova interface para as categorias
 interface TemplateCategory {
   id: string;
   name: string;
@@ -27,14 +26,13 @@ export default function TemplateEditorPage() {
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [categoryId, setCategoryId] = useState<string | undefined>(); // Estado para o ID da categoria
-  const [categories, setCategories] = useState<TemplateCategory[]>([]); // Estado para a lista de categorias
+  const [categoryId, setCategoryId] = useState<string | undefined>();
+  const [categories, setCategories] = useState<TemplateCategory[]>([]);
   const [colorGroups, setColorGroups] = useState<ColorGroup[]>([]);
   const [gridSize, setGridSize] = useState(15);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // ... (restante dos estados não precisa de alteração)
   const [activeTool, setActiveTool] = useState<ActiveTool | null>(null);
   const [isEraserActive, setIsEraserActive] = useState(false);
   const [brushSize, setBrushSize] = useState(1);
@@ -59,7 +57,6 @@ export default function TemplateEditorPage() {
 
   useEffect(() => {
     const fetchInitialData = async () => {
-      // Carregar todas as categorias disponíveis para o dropdown
       const { data: categoriesData } = await supabase
         .from("template_categories")
         .select("id, name")
@@ -94,7 +91,7 @@ export default function TemplateEditorPage() {
 
         setTitle(templateData.title);
         setDescription(templateData.description || "");
-        setCategoryId(templateData.category_id || undefined); // Carregar o ID da categoria
+        setCategoryId(templateData.category_id || undefined);
         setGridSize(templateData.grid_size);
         setHistoryState(
           templateData.grid_data ||
@@ -148,12 +145,11 @@ export default function TemplateEditorPage() {
     const templateData = {
       title,
       description,
-      category_id: categoryId, // Salvar o ID da categoria
+      category_id: categoryId,
       grid_size: gridSize,
       grid_data: gridState,
     };
 
-    // ... (restante da função de salvar é a mesma)
     let currentTemplateId = templateId;
     if (isNewTemplate) {
       const { data: newTemplate, error } = await supabase
@@ -207,7 +203,6 @@ export default function TemplateEditorPage() {
     router.refresh();
   };
 
-  // ... (Cole aqui as funções auxiliares que removemos na correção anterior: resetActiveToolIfNeeded, checkForDuplicates, clearAnswersFromGrid, paintCells, etc.)
   const resetActiveToolIfNeeded = (removedAnswers: string[]) => {
     if (activeTool && removedAnswers.includes(activeTool.answer)) {
       setActiveTool(null);
@@ -292,7 +287,6 @@ export default function TemplateEditorPage() {
       <div className="grid grid-cols-1 lg:grid-cols-[1fr] xl:grid-cols-[380px_1fr_320px] gap-6 items-start">
         <div className="space-y-6">
           <div className="bg-white p-5 rounded-lg shadow-md h-fit border border-gray-200">
-            {/* Campo de Categoria (Dropdown) */}
             <div className="mb-4">
               <label
                 htmlFor="category"

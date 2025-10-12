@@ -11,6 +11,13 @@ import Spinner from "@/components/Spinner";
 import type { ColorGroup, ActiveTool } from "@/lib/types";
 import { useHistory } from "@/hooks/useHistory";
 
+// Definindo um tipo para os dados das perguntas que vêm da base de dados
+type FetchedQuestion = {
+  color: string;
+  question_text: string;
+  answer: string;
+};
+
 function HomePageContent() {
   const { supabase, user } = useSupabase();
   const searchParams = useSearchParams();
@@ -18,17 +25,14 @@ function HomePageContent() {
   const [title, setTitle] = useState("");
   const [colorGroups, setColorGroups] = useState<ColorGroup[]>([]);
   const [gridSize, setGridSize] = useState(15);
-
   const {
     state: historyState,
     setState: setHistoryState,
     undo: undoGrid,
     redo: redoGrid,
   } = useHistory<string[]>(Array(15 * 15).fill(""));
-
   const [gridState, setGridState] = useState<string[]>(historyState);
   const gridStateBeforePaint = useRef<string[]>([]);
-
   const [isLoading, setIsLoading] = useState(true);
   const [isQuizLoaded, setIsQuizLoaded] = useState(false);
   const [currentQuizId, setCurrentQuizId] = useState<string | null>(null);
@@ -69,7 +73,6 @@ function HomePageContent() {
     checkForDuplicates(colorGroups);
   }, [colorGroups, checkForDuplicates]);
 
-  // Efeito principal para carregar dados
   useEffect(() => {
     const quizId = searchParams.get("quiz_id");
     const templateId = searchParams.get("template_id");
@@ -79,7 +82,7 @@ function HomePageContent() {
       quizTitle: string,
       quizGridSize: number,
       quizGridData: string[] | null,
-      questionsData: any[]
+      questionsData: FetchedQuestion[]
     ) => {
       setTitle(quizTitle);
       setGridSize(quizGridSize);
@@ -94,13 +97,13 @@ function HomePageContent() {
         const colorObj = JSON.parse(q.color);
         if (!newColorGroups.has(colorObj.value)) {
           newColorGroups.set(colorObj.value, {
-            id: Date.now() + index * 1000, // Chave mais robusta
+            id: Date.now() + index * 1000,
             color: colorObj,
             questions: [],
           });
         }
         newColorGroups.get(colorObj.value)!.questions.push({
-          id: Date.now() + index, // Chave mais robusta
+          id: Date.now() + index,
           text: q.question_text,
           answer: q.answer,
         });
@@ -140,7 +143,7 @@ function HomePageContent() {
         quizData.title,
         quizData.grid_size,
         quizData.grid_data,
-        questionsData
+        questionsData as FetchedQuestion[]
       );
       setIsQuizLoaded(true);
       setIsLoading(false);
@@ -178,10 +181,10 @@ function HomePageContent() {
         templateData.title,
         templateData.grid_size,
         templateData.grid_data,
-        questionsData
+        questionsData as FetchedQuestion[]
       );
       setIsOwner(true);
-      setIsQuizLoaded(false); // É um novo quiz, então não está "carregado"
+      setIsQuizLoaded(false);
       setIsLoading(false);
     };
 
@@ -195,7 +198,6 @@ function HomePageContent() {
     }
   }, [supabase, searchParams, setHistoryState, router, user]);
 
-  // Efeito isolado para criar um grupo de cor inicial
   useEffect(() => {
     const quizId = searchParams.get("quiz_id");
     const templateId = searchParams.get("template_id");
@@ -232,10 +234,12 @@ function HomePageContent() {
   }, [undoGrid, redoGrid]);
 
   useEffect(() => {
-    const newGrid = Array(gridSize * gridSize).fill("");
-    setGridState(newGrid);
-    setHistoryState(newGrid, true);
-  }, [gridSize, setHistoryState]);
+    if (!isQuizLoaded) {
+      const newGrid = Array(gridSize * gridSize).fill("");
+      setGridState(newGrid);
+      setHistoryState(newGrid, true);
+    }
+  }, [gridSize, isQuizLoaded, setHistoryState]);
 
   const clearAnswersFromGrid = (answersToClear: string[]) => {
     if (answersToClear.length === 0) return;

@@ -1,4 +1,3 @@
-// src/lib/types.ts
 import { SchoolColor } from "./colors";
 
 // Movemos todas as interfaces partilhadas para este ficheiro
