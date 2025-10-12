@@ -25,13 +25,13 @@ export default function AuthButton() {
     <div className="flex items-center gap-4">
       <Link
         href="/dashboard"
-        className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+        className="text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors"
       >
         Meus Questionários
       </Link>
       <Link
         href="/account"
-        className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+        className="text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors"
         title="Minha Conta"
       >
         Olá, {user.email?.split("@")[0]}
@@ -46,7 +46,7 @@ export default function AuthButton() {
   ) : (
     <Link
       href="/login"
-      className="py-2 px-4 text-sm bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 transition-colors"
+      className="py-2 px-4 text-sm bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 transition-colors min-w-[140px] text-center"
     >
       Login / Cadastrar
     </Link>

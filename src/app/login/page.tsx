@@ -132,9 +132,15 @@ export default function LoginPage() {
         <button
           onClick={handleAuthAction}
           disabled={loading}
-          className="w-full py-2 px-4 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 transition-colors disabled:bg-blue-400 disabled:cursor-not-allowed flex items-center justify-center"
+          className="w-full h-10 flex items-center justify-center py-2 px-4 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 transition-colors disabled:bg-blue-400 disabled:cursor-not-allowed"
         >
-          {loading ? <Spinner/> : (isSignUp ? "Registar" : "Entrar")}
+          {loading ? (
+            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+          ) : isSignUp ? (
+            "Registar"
+          ) : (
+            "Entrar"
+          )}
         </button>
         {message && (
           <p

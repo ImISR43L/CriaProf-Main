@@ -18,20 +18,32 @@ const Navbar = () => {
           <div className="hidden md:flex items-center gap-6">
             {/* Links de Administração */}
             {profile?.role === "admin" && (
-              <>
+              <div className="flex items-center gap-4 p-2 rounded-md bg-red-50 border border-red-200">
                 <Link
                   href="/admin/content"
                   className="text-sm font-bold text-red-600 hover:text-red-800"
                 >
-                  Gerir Conteúdo
+                  Conteúdo
                 </Link>
                 <Link
                   href="/admin/templates"
                   className="text-sm font-bold text-red-600 hover:text-red-800"
                 >
-                  Gerir Templates
+                  Templates
                 </Link>
-              </>
+                <Link
+                  href="/admin/news"
+                  className="text-sm font-bold text-red-600 hover:text-red-800"
+                >
+                  Notícias
+                </Link>
+                <Link
+                  href="/admin/roadmap"
+                  className="text-sm font-bold text-red-600 hover:text-red-800"
+                >
+                  Roadmap
+                </Link>
+              </div>
             )}
             {/* Links Públicos */}
             <Link
@@ -46,6 +58,20 @@ const Navbar = () => {
             >
               Comunidade
             </Link>
+            <Link
+              href="/news"
+              className="text-sm text-gray-600 hover:text-blue-600"
+            >
+              Notícias
+            </Link>{" "}
+            {/* ADICIONADO */}
+            <Link
+              href="/roadmap"
+              className="text-sm text-gray-600 hover:text-blue-600"
+            >
+              Roadmap
+            </Link>{" "}
+            {/* ADICIONADO */}
             <Link
               href="/about"
               className="text-sm text-gray-600 hover:text-blue-600"

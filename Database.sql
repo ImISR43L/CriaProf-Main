@@ -582,3 +582,73 @@ CREATE POLICY "Admins can manage site content." ON public.site_content
 FOR ALL   -- "ALL" inclui INSERT, UPDATE, e DELETE
 USING (is_admin())
 WITH CHECK (is_admin());
+
+ALTER TABLE public.templates
+ADD COLUMN disciplina TEXT;
+
+-- 1. Remover a coluna "disciplina" que criámos anteriormente.
+ALTER TABLE public.templates
+DROP COLUMN IF EXISTS disciplina;
+
+-- 2. Adicionar a nova coluna que irá ligar o template à sua categoria.
+ALTER TABLE public.templates
+ADD COLUMN IF NOT EXISTS category_id UUID REFERENCES public.template_categories(id);
+
+-- ========= TABELA DE NOTÍCIAS (NEWS) =========
+
+-- 1. Cria a tabela para os posts de notícias.
+CREATE TABLE IF NOT EXISTS public.news_posts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT NOT NULL,
+  content TEXT,
+  published_at TIMESTAMPTZ DEFAULT NOW()
+);
+COMMENT ON TABLE public.news_posts IS 'Stores individual news posts for the news page.';
+
+-- 2. Ativa a Segurança (RLS) e define as permissões.
+ALTER TABLE public.news_posts ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public can read news posts." ON public.news_posts;
+DROP POLICY IF EXISTS "Admins can manage news posts." ON public.news_posts;
+
+CREATE POLICY "Public can read news posts." ON public.news_posts FOR SELECT USING (true);
+CREATE POLICY "Admins can manage news posts." ON public.news_posts FOR ALL USING (is_admin()) WITH CHECK (is_admin());
+
+-- 3. Insere os posts de notícias que estão atualmente no código.
+-- A cláusula ON CONFLICT evita duplicados se o script for executado mais de uma vez.
+INSERT INTO public.news_posts (id, title, published_at, content) VALUES
+  ('11111111-aaaa-bbbb-cccc-000000000001', 'Lançamento da Galeria da Comunidade!', '2025-10-05 00:00:00+00', 'É com grande entusiasmo que anunciamos o lançamento da Galeria da Comunidade! Agora, os professores podem partilhar as suas atividades com outros educadores, criando um grande repositório colaborativo de conhecimento. Explore a página da Comunidade hoje mesmo!'),
+  ('11111111-aaaa-bbbb-cccc-000000000002', 'Novos Tamanhos de Grade Disponíveis', '2025-10-04 00:00:00+00', 'A pedido da comunidade, adicionámos a opção de criar atividades com diferentes tamanhos de grade. Agora pode escolher entre 10x10, 15x15 e 20x20 para adaptar as atividades a diferentes faixas etárias e complexidades.')
+ON CONFLICT (id) DO NOTHING;
+
+
+-- ========= TABELA DO ROADMAP =========
+
+-- 1. Cria a tabela para os itens do roadmap.
+CREATE TABLE IF NOT EXISTS public.roadmap_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT NOT NULL,
+  status TEXT NOT NULL, -- Ex: 'Concluído', 'Em Progresso', 'Planejado'
+  order_index INT -- Para controlar a ordem de exibição
+);
+COMMENT ON TABLE public.roadmap_items IS 'Stores items for the project roadmap page.';
+
+-- 2. Ativa a Segurança (RLS) e define as permissões.
+ALTER TABLE public.roadmap_items ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public can read roadmap items." ON public.roadmap_items;
+DROP POLICY IF EXISTS "Admins can manage roadmap items." ON public.roadmap_items;
+
+CREATE POLICY "Public can read roadmap items." ON public.roadmap_items FOR SELECT USING (true);
+CREATE POLICY "Admins can manage roadmap items." ON public.roadmap_items FOR ALL USING (is_admin()) WITH CHECK (is_admin());
+
+-- 3. Insere os itens do roadmap que estão atualmente no código.
+INSERT INTO public.roadmap_items (id, title, status, order_index) VALUES
+  ('22222222-aaaa-bbbb-cccc-000000000001', 'Gerador de Atividades com Exportação para PDF', 'Concluído', 1),
+  ('22222222-aaaa-bbbb-cccc-000000000002', 'Sistema de Contas de Utilizador (Login e Cadastro)', 'Concluído', 2),
+  ('22222222-aaaa-bbbb-cccc-000000000003', 'Salvar e Carregar Questionários na Nuvem', 'Concluído', 3),
+  ('22222222-aaaa-bbbb-cccc-000000000004', 'Tamanhos de Grade Variáveis (10x10, 15x15, 20x20)', 'Concluído', 4),
+  ('22222222-aaaa-bbbb-cccc-000000000005', 'Galeria de Templates Pré-Prontos', 'Concluído', 5),
+  ('22222222-aaaa-bbbb-cccc-000000000006', 'Galeria da Comunidade com Partilha de Quizzes', 'Concluído', 6),
+  ('22222222-aaaa-bbbb-cccc-000000000007', 'Página de Perfil para Atualização de Nome', 'Concluído', 7),
+  ('22222222-aaaa-bbbb-cccc-000000000008', 'Implementação de Melhorias Visuais (UX)', 'Em Progresso', 8),
+  ('22222222-aaaa-bbbb-cccc-000000000009', 'Suporte para Múltiplos Idiomas', 'Planejado', 9)
+ON CONFLICT (id) DO NOTHING;
