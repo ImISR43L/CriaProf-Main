@@ -1,11 +1,46 @@
 // src/app/about/page.tsx
-import React from "react";
+"use client";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
+import { useSupabase } from "@/components/AuthProvider";
+import Spinner from "@/components/Spinner";
 
 export default function AboutPage() {
+  const [motivation, setMotivation] = useState("");
+  const [loading, setLoading] = useState(true);
+  const supabase = createClient();
+  const { profile } = useSupabase();
+
+  useEffect(() => {
+    const fetchContent = async () => {
+      setLoading(true);
+      const { data } = await supabase
+        .from("site_content")
+        .select("content_value")
+        .eq("page_key", "about_motivation")
+        .single();
+      if (data) {
+        setMotivation(data.content_value);
+      }
+      setLoading(false);
+    };
+    fetchContent();
+  }, [supabase]);
+
   return (
     <div className="container mx-auto p-8 max-w-4xl">
-      <h1 className="text-4xl font-bold mb-4 text-gray-900">Sobre o Projeto</h1>
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-4xl font-bold text-gray-900">Sobre o Projeto</h1>
+        {profile?.role === "admin" && (
+          <Link
+            href="/admin/content"
+            className="text-sm text-blue-600 hover:underline"
+          >
+            Editar Página
+          </Link>
+        )}
+      </div>
       <p className="text-lg text-gray-700 mb-6">
         Bem-vindo ao Gerador de Atividades "Pinte por Número"! Esta ferramenta
         foi criada com o objetivo de fornecer aos educadores um recurso simples,
@@ -17,12 +52,11 @@ export default function AboutPage() {
         <h2 className="text-2xl font-bold mb-3 text-gray-900">
           Minha Motivação
         </h2>
-        <p className="text-gray-600 mb-6">
-          [**Aqui você pode escrever sobre você e por que decidiu criar este
-          projeto.** Fale sobre sua paixão por educação, programação, ou a
-          necessidade que você identificou que o levou a desenvolver esta
-          ferramenta.]
-        </p>
+        {loading ? (
+          <Spinner />
+        ) : (
+          <p className="text-gray-600 mb-6">{motivation}</p>
+        )}
 
         <h2 className="text-2xl font-bold mb-3 text-gray-900">
           Tecnologias Utilizadas

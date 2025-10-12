@@ -504,3 +504,81 @@ VALUES
   ('20202020-0003-0003-0003-000000000003', '{"name": "Verde", "value": "#008000"}', 'O formato da molécula de DNA é conhecido como...', 'Dupla Hélice'),
   ('20202020-0003-0003-0003-000000000003', '{"name": "Vermelho", "value": "#FF0000"}', 'No RNA, qual base substitui a Timina?', 'Uracila'),
   ('20202020-0003-0003-0003-000000000003', '{"name": "Amarelo", "value": "#FFFF00"}', 'Uma sequência de três bases nitrogenadas que codifica um aminoácido é chamada de...', 'Códon');
+
+  -- Adiciona uma coluna 'role' à tabela de perfis.
+-- Por defeito, todos os novos utilizadores terão a função 'user'.
+ALTER TABLE public.profiles
+ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'user';
+
+-- Cria uma função auxiliar para verificar se o utilizador atual é um administrador.
+-- Isto simplifica a escrita das políticas de segurança.
+CREATE OR REPLACE FUNCTION is_admin()
+RETURNS boolean AS $$
+BEGIN
+  RETURN (
+    SELECT role FROM public.profiles WHERE id = auth.uid()
+  ) = 'admin';
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Remove políticas de escrita antigas, se existirem.
+DROP POLICY IF EXISTS "Admins can manage templates." ON public.templates;
+DROP POLICY IF EXISTS "Admins can manage template questions." ON public.template_questions;
+
+-- Aplica as novas políticas de segurança para a tabela 'templates'.
+-- Apenas administradores podem criar, atualizar ou apagar templates.
+CREATE POLICY "Admins can manage templates." ON public.templates
+FOR ALL -- Aplica-se a INSERT, UPDATE, DELETE
+USING (is_admin())
+WITH CHECK (is_admin());
+
+-- Aplica as novas políticas de segurança para a tabela 'template_questions'.
+-- Apenas administradores podem gerir as perguntas dos templates.
+CREATE POLICY "Admins can manage template questions." ON public.template_questions
+FOR ALL -- Aplica-se a INSERT, UPDATE, DELETE
+USING (is_admin())
+WITH CHECK (is_admin());
+
+-- 1. Cria a tabela para armazenar conteúdo editável do site.
+CREATE TABLE IF NOT EXISTS public.site_content (
+  page_key TEXT PRIMARY KEY,
+  content_value TEXT NOT NULL
+);
+
+COMMENT ON TABLE public.site_content IS 'Stores editable text content for various site pages.';
+
+-- 2. Ativa a Segurança a Nível de Linha (RLS).
+ALTER TABLE public.site_content ENABLE ROW LEVEL SECURITY;
+
+-- 3. Remove políticas antigas para garantir que as novas sejam aplicadas corretamente.
+DROP POLICY IF EXISTS "Public can read site content." ON public.site_content;
+DROP POLICY IF EXISTS "Admins can update site content." ON public.site_content;
+
+-- 4. Cria políticas de acesso: Todos podem ler, mas apenas administradores podem atualizar.
+CREATE POLICY "Public can read site content." ON public.site_content
+FOR SELECT
+USING (true);
+
+CREATE POLICY "Admins can update site content." ON public.site_content
+FOR UPDATE
+USING (is_admin())
+WITH CHECK (is_admin());
+
+-- 5. Insere os dados iniciais das páginas (ou atualiza se já existirem).
+-- A cláusula ON CONFLICT previne erros se o script for executado mais de uma vez.
+INSERT INTO public.site_content (page_key, content_value) VALUES
+  ('about_motivation', '[**Aqui você pode escrever sobre você e por que decidiu criar este projeto.** Fale sobre sua paixão por educação, programação, ou a necessidade que você identificou que o levou a desenvolver esta ferramenta.]'),
+  ('contact_email', 'seu-email@exemplo.com'),
+  ('contact_linkedin', 'linkedin.com/in/seu-perfil')
+ON CONFLICT (page_key) DO UPDATE SET
+  content_value = EXCLUDED.content_value;
+
+  -- Remove a política antiga que só permitia UPDATE
+DROP POLICY IF EXISTS "Admins can update site content." ON public.site_content;
+
+-- Cria uma nova política mais abrangente que permite todas as ações de escrita (INSERT, UPDATE, DELETE)
+-- para administradores na tabela de conteúdo do site.
+CREATE POLICY "Admins can manage site content." ON public.site_content
+FOR ALL   -- "ALL" inclui INSERT, UPDATE, e DELETE
+USING (is_admin())
+WITH CHECK (is_admin());
