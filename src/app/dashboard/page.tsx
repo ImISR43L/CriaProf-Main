@@ -27,7 +27,7 @@ export default function DashboardPage() {
     const fetchQuizzes = async () => {
       if (!user) return;
       setLoading(true);
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("quizzes")
         .select("id, title, created_at, is_public")
         .eq("user_id", user.id)

@@ -28,7 +28,7 @@ export default function AdminContentPage() {
 
   const fetchContent = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase.from("site_content").select("*");
+    const { data } = await supabase.from("site_content").select("*");
     if (data) {
       setContent(data);
     }
