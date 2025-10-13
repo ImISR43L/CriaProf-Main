@@ -7,10 +7,10 @@ import Spinner from "@/components/Spinner";
 import { generatePdf } from "@/lib/pdfGenerator";
 import type { ColorGroup } from "@/lib/types";
 
-// Tipo para um único item de perfil ou categoria
+// Tipo auxiliar para lidar com a ambiguidade do Supabase
 type RelatedName = { name: string } | { full_name: string };
 
-// CORREÇÃO: A interface agora aceita um objeto, um array, ou nulo.
+// Interface flexível que aceita objeto, array ou nulo
 interface PublicQuiz {
   id: string;
   title: string;
@@ -141,7 +141,7 @@ export default function CommunityPage() {
     }
   };
 
-  // Funções auxiliares para extrair o nome, independentemente de ser objeto ou array
+  // Funções auxiliares para extrair o nome de forma segura
   const getCategoryName = (
     cat: RelatedName | RelatedName[] | null
   ): string | undefined => {

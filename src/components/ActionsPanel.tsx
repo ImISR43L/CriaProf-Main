@@ -34,7 +34,6 @@ const ActionsPanel = ({
   const [message, setMessage] = useState("");
 
   const handleGeneratePdf = () => {
-    // --- NOVA VERIFICAÇÃO DE TÍTULO ---
     if (!activityTitle || activityTitle.trim() === "") {
       alert("Por favor, adicione um título à atividade antes de gerar o PDF.");
       return;
@@ -48,7 +47,6 @@ const ActionsPanel = ({
       return;
     }
 
-    // --- NOVA VERIFICAÇÃO DE TÍTULO ---
     if (!activityTitle || activityTitle.trim() === "") {
       alert("Por favor, adicione um título à atividade antes de salvar.");
       return;
@@ -124,7 +122,6 @@ const ActionsPanel = ({
       }
 
       if (questionsToInsert.length > 0) {
-        // @ts-ignore
         const { error: questionsError } = await supabase
           .from("questions")
           .insert(
@@ -137,7 +134,6 @@ const ActionsPanel = ({
         }
       }
       setMessage("Questionário salvo com sucesso!");
-      // @ts-ignore
       onNewQuizSaved(quizData.id);
     }
 

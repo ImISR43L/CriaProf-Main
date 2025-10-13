@@ -50,7 +50,6 @@ function HomePageContent() {
   const [isPainting, setIsPainting] = useState(false);
   const [autoSaveStatus, setAutoSaveStatus] = useState<string>("Salvo");
 
-  // Novos estados para categorias
   const [categories, setCategories] = useState<TemplateCategory[]>([]);
   const [categoryId, setCategoryId] = useState<string | undefined>();
 
@@ -197,21 +196,27 @@ function HomePageContent() {
         setIsQuizLoaded(false);
       } else {
         setIsOwner(true);
-        if (colorGroups.length === 0) {
-          setColorGroups([
-            {
-              id: Date.now(),
-              color: { name: "Amarelo", value: "#FFFF00" },
-              questions: [{ id: 1, text: "", answer: "" }],
-            },
-          ]);
-        }
       }
       setIsLoading(false);
     };
 
     fetchInitialData();
   }, [supabase, searchParams, setHistoryState, router, user]);
+
+  // CORREÇÃO: Adicionada a dependência 'colorGroups.length'
+  useEffect(() => {
+    const quizId = searchParams.get("quiz_id");
+    const templateId = searchParams.get("template_id");
+    if (!quizId && !templateId && colorGroups.length === 0 && !isLoading) {
+      setColorGroups([
+        {
+          id: Date.now(),
+          color: { name: "Amarelo", value: "#FFFF00" },
+          questions: [{ id: 1, text: "", answer: "" }],
+        },
+      ]);
+    }
+  }, [searchParams, colorGroups.length, isLoading]);
 
   useEffect(() => {
     if (!currentQuizId || !isOwner) {
