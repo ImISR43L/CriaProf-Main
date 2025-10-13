@@ -322,6 +322,7 @@ export default function TemplateEditorPage() {
               className="w-full p-2 border border-gray-300 rounded-md bg-white text-gray-900 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
+          {/* CORREÇÃO APLICADA AQUI */}
           <ControlPanel
             title={title}
             setTitle={setTitle}
@@ -332,6 +333,9 @@ export default function TemplateEditorPage() {
             activeTool={activeTool}
             clearAnswersFromGrid={clearAnswersFromGrid}
             isOwner={true}
+            categories={categories}
+            categoryId={categoryId}
+            setCategoryId={setCategoryId}
           />
         </div>
 

@@ -203,7 +203,6 @@ function HomePageContent() {
     fetchInitialData();
   }, [supabase, searchParams, setHistoryState, router, user]);
 
-  // CORREÇÃO: Adicionada a dependência 'colorGroups.length'
   useEffect(() => {
     const quizId = searchParams.get("quiz_id");
     const templateId = searchParams.get("template_id");
@@ -449,7 +448,7 @@ function HomePageContent() {
 
 export default function HomePage() {
   return (
-    <Suspense fallback={<Spinner />}>
+    <Suspense fallback={<Suspense />}>
       <HomePageContent />
     </Suspense>
   );
