@@ -1,7 +1,13 @@
+// src/components/ControlPanel.tsx
 import React from "react";
 import ColorBlock from "./ColorBlock";
 import { schoolColorPalette } from "@/lib/colors";
 import type { ColorGroup, ActiveTool, Question } from "@/lib/types";
+
+interface TemplateCategory {
+  id: string;
+  name: string;
+}
 
 interface ControlPanelProps {
   title: string;
@@ -13,6 +19,9 @@ interface ControlPanelProps {
   activeTool: ActiveTool | null;
   clearAnswersFromGrid: (answers: string[]) => void;
   isOwner: boolean;
+  categories: TemplateCategory[];
+  categoryId: string | undefined;
+  setCategoryId: (id: string) => void;
 }
 
 const ControlPanel = ({
@@ -25,6 +34,9 @@ const ControlPanel = ({
   activeTool,
   clearAnswersFromGrid,
   isOwner,
+  categories,
+  categoryId,
+  setCategoryId,
 }: ControlPanelProps) => {
   let questionCounter = 0;
   const usedColorValues = new Set(colorGroups.map((g) => g.color.value));
@@ -78,24 +90,51 @@ const ControlPanel = ({
       <h2 className="text-xl font-bold text-gray-900 mb-4">
         Painel de Perguntas
       </h2>
-      <div className="mb-6">
-        <label
-          htmlFor="title"
-          className="block text-sm font-medium text-gray-700 mb-1"
-        >
-          Título da Atividade
-        </label>
-        <input
-          type="text"
-          id="title"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Ex: Revisão de Matemática"
-          className="w-full p-2 border border-gray-300 rounded-md bg-white text-gray-900 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-          disabled={!isOwner}
-        />
+      <div className="mb-6 space-y-4">
+        <div>
+          <label
+            htmlFor="title"
+            className="block text-sm font-medium text-gray-700 mb-1"
+          >
+            Título da Atividade
+          </label>
+          <input
+            type="text"
+            id="title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Ex: Revisão de Matemática"
+            className="w-full p-2 border border-gray-300 rounded-md bg-white text-gray-900 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+            disabled={!isOwner}
+          />
+        </div>
+
+        <div>
+          <label
+            htmlFor="category"
+            className="block text-sm font-medium text-gray-700 mb-1"
+          >
+            Categoria
+          </label>
+          <select
+            id="category"
+            value={categoryId || ""}
+            onChange={(e) => setCategoryId(e.target.value)}
+            disabled={!isOwner}
+            className="w-full p-2 border border-gray-300 rounded-md bg-white text-gray-900 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+          >
+            <option value="" disabled>
+              Selecione uma categoria
+            </option>
+            {categories.map((cat) => (
+              <option key={cat.id} value={cat.id}>
+                {cat.name}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
-      <div className="max-h-[60vh] overflow-y-auto pr-2">
+      <div className="max-h-[50vh] overflow-y-auto pr-2">
         {colorGroups.map((group) => {
           const baseReferenceNumber = questionCounter + 1;
           questionCounter += group.questions.length;

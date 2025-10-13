@@ -1,40 +1,162 @@
+// src/app/community/page.tsx
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import Spinner from "@/components/Spinner";
+import { generatePdf } from "@/lib/pdfGenerator";
+import type { ColorGroup } from "@/lib/types";
 
+// Tipo para um único item de perfil ou categoria
+type RelatedName = { name: string } | { full_name: string };
+
+// CORREÇÃO: A interface agora aceita um objeto, um array, ou nulo.
 interface PublicQuiz {
   id: string;
   title: string;
   created_at: string;
-  author_name: string | null;
+  profiles: RelatedName | RelatedName[] | null;
+  template_categories: RelatedName | RelatedName[] | null;
+}
+interface Category {
+  id: string;
+  name: string;
 }
 
 export default function CommunityPage() {
   const [quizzes, setQuizzes] = useState<PublicQuiz[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [generatingPdfId, setGeneratingPdfId] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedGridSize, setSelectedGridSize] = useState<string>("all");
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("all");
+
   const supabase = createClient();
 
   useEffect(() => {
-    const fetchPublicQuizzes = async () => {
+    const fetchFiltersAndQuizzes = async () => {
       setLoading(true);
-      const { data, error } = await supabase.rpc("get_public_quizzes");
 
+      if (categories.length === 0) {
+        const { data: categoriesData } = await supabase
+          .from("template_categories")
+          .select("id, name")
+          .order("order_index");
+        if (categoriesData) setCategories(categoriesData);
+      }
+
+      let query = supabase
+        .from("quizzes")
+        .select(
+          `
+          id,
+          title,
+          created_at,
+          profiles ( full_name ),
+          template_categories ( name )
+        `
+        )
+        .eq("is_public", true)
+        .order("created_at", { ascending: false });
+
+      if (searchTerm) {
+        query = query.ilike("title", `%${searchTerm}%`);
+      }
+      if (selectedGridSize !== "all") {
+        query = query.eq("grid_size", parseInt(selectedGridSize));
+      }
+      if (selectedCategoryId !== "all") {
+        query = query.eq("category_id", selectedCategoryId);
+      }
+
+      const { data, error } = await query;
       if (data) {
         setQuizzes(data as PublicQuiz[]);
       } else if (error) {
-        console.error("Erro ao buscar quizzes públicos via RPC:", error);
+        console.error("Erro ao buscar quizzes públicos:", error);
       }
       setLoading(false);
     };
 
-    fetchPublicQuizzes();
-  }, [supabase]);
+    const searchDebounce = setTimeout(() => {
+      fetchFiltersAndQuizzes();
+    }, 300);
 
-  if (loading) {
-    return <Spinner />;
-  }
+    return () => clearTimeout(searchDebounce);
+  }, [
+    supabase,
+    searchTerm,
+    selectedGridSize,
+    selectedCategoryId,
+    categories.length,
+  ]);
+
+  const handleGeneratePdf = async (quizId: string, title: string) => {
+    setGeneratingPdfId(quizId);
+    try {
+      const { data: quizData } = await supabase
+        .from("quizzes")
+        .select("grid_data, grid_size")
+        .eq("id", quizId)
+        .single();
+      if (!quizData) throw new Error("Quiz não encontrado");
+
+      const { data: questionsData } = await supabase
+        .from("questions")
+        .select("color, question_text, answer")
+        .eq("quiz_id", quizId);
+      if (!questionsData) throw new Error("Perguntas não encontradas");
+
+      const colorGroups = new Map<string, ColorGroup>();
+      questionsData.forEach((q) => {
+        const colorObj = JSON.parse(q.color);
+        if (!colorGroups.has(colorObj.value)) {
+          colorGroups.set(colorObj.value, {
+            id: Math.random(),
+            color: colorObj,
+            questions: [],
+          });
+        }
+        colorGroups
+          .get(colorObj.value)!
+          .questions.push({
+            id: Math.random(),
+            text: q.question_text,
+            answer: q.answer,
+          });
+      });
+
+      generatePdf(
+        title,
+        Array.from(colorGroups.values()),
+        quizData.grid_data,
+        quizData.grid_size
+      );
+    } catch (error) {
+      console.error("Erro ao gerar PDF:", error);
+      alert("Não foi possível gerar o PDF. Tente novamente mais tarde.");
+    } finally {
+      setGeneratingPdfId(null);
+    }
+  };
+
+  // Funções auxiliares para extrair o nome, independentemente de ser objeto ou array
+  const getCategoryName = (
+    cat: RelatedName | RelatedName[] | null
+  ): string | undefined => {
+    if (!cat) return undefined;
+    const item = Array.isArray(cat) ? cat[0] : cat;
+    return (item as { name: string }).name;
+  };
+
+  const getAuthorName = (
+    prof: RelatedName | RelatedName[] | null
+  ): string | undefined => {
+    if (!prof) return undefined;
+    const item = Array.isArray(prof) ? prof[0] : prof;
+    return (item as { full_name: string }).full_name;
+  };
 
   return (
     <div className="container mx-auto p-8">
@@ -47,32 +169,104 @@ export default function CommunityPage() {
         </p>
       </div>
 
-      {quizzes.length > 0 ? (
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 p-4 bg-white rounded-lg shadow-sm border">
+        <div>
+          <label
+            htmlFor="search"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Pesquisar por Título
+          </label>
+          <input
+            type="text"
+            id="search"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Digite o título..."
+            className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+          />
+        </div>
+        <div>
+          <label
+            htmlFor="gridSize"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Tamanho da Grade
+          </label>
+          <select
+            id="gridSize"
+            value={selectedGridSize}
+            onChange={(e) => setSelectedGridSize(e.target.value)}
+            className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+          >
+            <option value="all">Todos</option>
+            <option value="10">10x10</option>
+            <option value="15">15x15</option>
+            <option value="20">20x20</option>
+          </select>
+        </div>
+        <div>
+          <label
+            htmlFor="category"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Categoria
+          </label>
+          <select
+            id="category"
+            value={selectedCategoryId}
+            onChange={(e) => setSelectedCategoryId(e.target.value)}
+            className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+          >
+            <option value="all">Todas</option>
+            {categories.map((cat) => (
+              <option key={cat.id} value={cat.id}>
+                {cat.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {loading ? (
+        <Spinner />
+      ) : quizzes.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {quizzes.map((quiz) => (
             <div
               key={quiz.id}
-              className="bg-white border border-gray-200 rounded-lg shadow-md p-6 flex flex-col"
+              className="bg-white border border-gray-200 rounded-lg shadow-md p-6 flex flex-col transition-transform hover:scale-105"
             >
+              <span className="text-xs font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded-full self-start mb-2">
+                {getCategoryName(quiz.template_categories) || "Sem Categoria"}
+              </span>
               <h2 className="font-bold text-xl text-gray-900 mb-2">
                 {quiz.title}
               </h2>
               <p className="text-sm text-gray-500 flex-grow mb-4">
-                Criado por: {quiz.author_name || "Anônimo"}
+                Criado por: {getAuthorName(quiz.profiles) || "Anônimo"}
               </p>
-              <Link
-                href={`/?quiz_id=${quiz.id}`}
-                className="mt-auto text-center w-full py-2 px-4 bg-green-600 text-white font-semibold rounded-md hover:bg-green-700 transition-colors"
-              >
-                Ver e Usar Questionário
-              </Link>
+              <div className="mt-auto space-y-2">
+                <Link
+                  href={`/?quiz_id=${quiz.id}`}
+                  className="block text-center w-full py-2 px-4 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700"
+                >
+                  Ver e Usar
+                </Link>
+                <button
+                  onClick={() => handleGeneratePdf(quiz.id, quiz.title)}
+                  disabled={generatingPdfId === quiz.id}
+                  className="w-full py-2 px-4 bg-green-600 text-white font-semibold rounded-md hover:bg-green-700 disabled:bg-green-400"
+                >
+                  {generatingPdfId === quiz.id ? "A gerar..." : "Gerar PDF"}
+                </button>
+              </div>
             </div>
           ))}
         </div>
       ) : (
         <p className="text-center text-gray-500 mt-10">
-          Ainda não há questionários públicos. Seja o primeiro a partilhar o
-          seu!
+          Nenhum questionário encontrado com os filtros selecionados.
         </p>
       )}
     </div>

@@ -20,6 +20,7 @@ interface ToolPanelProps {
   quizId: string | null;
   isOwner: boolean;
   onNewQuizSaved: (quizId: string) => void;
+  categoryId: string | undefined;
 }
 
 const ToolPanel = (props: ToolPanelProps) => {
@@ -33,18 +34,18 @@ const ToolPanel = (props: ToolPanelProps) => {
         onSelectEraser={props.onSelectEraser}
         disabled={!props.isOwner}
       />
-      {props.isOwner && (
-        <ActionsPanel
-          onClearGrid={props.onClearGrid}
-          activityTitle={props.activityTitle}
-          colorGroups={props.colorGroups}
-          gridState={props.gridState}
-          gridSize={props.gridSize}
-          quizId={props.quizId}
-          onNewQuizSaved={props.onNewQuizSaved}
-          isOwner={props.isOwner}
-        />
-      )}
+
+      <ActionsPanel
+        onClearGrid={props.onClearGrid}
+        activityTitle={props.activityTitle}
+        colorGroups={props.colorGroups}
+        gridState={props.gridState}
+        gridSize={props.gridSize}
+        quizId={props.quizId}
+        onNewQuizSaved={props.onNewQuizSaved}
+        isOwner={props.isOwner}
+        categoryId={props.categoryId}
+      />
     </div>
   );
 };

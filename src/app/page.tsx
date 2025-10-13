@@ -11,12 +11,16 @@ import Spinner from "@/components/Spinner";
 import type { ColorGroup, ActiveTool } from "@/lib/types";
 import { useHistory } from "@/hooks/useHistory";
 
-// Definindo um tipo para os dados das perguntas que vêm da base de dados
 type FetchedQuestion = {
   color: string;
   question_text: string;
   answer: string;
 };
+
+interface TemplateCategory {
+  id: string;
+  name: string;
+}
 
 function HomePageContent() {
   const { supabase, user } = useSupabase();
@@ -44,6 +48,11 @@ function HomePageContent() {
   const [isEraserActive, setIsEraserActive] = useState(false);
   const [brushSize, setBrushSize] = useState(1);
   const [isPainting, setIsPainting] = useState(false);
+  const [autoSaveStatus, setAutoSaveStatus] = useState<string>("Salvo");
+
+  // Novos estados para categorias
+  const [categories, setCategories] = useState<TemplateCategory[]>([]);
+  const [categoryId, setCategoryId] = useState<string | undefined>();
 
   const resetActiveToolIfNeeded = (removedAnswers: string[]) => {
     if (activeTool && removedAnswers.includes(activeTool.answer)) {
@@ -82,10 +91,12 @@ function HomePageContent() {
       quizTitle: string,
       quizGridSize: number,
       quizGridData: string[] | null,
-      questionsData: FetchedQuestion[]
+      questionsData: FetchedQuestion[],
+      quizCategoryId?: string
     ) => {
       setTitle(quizTitle);
       setGridSize(quizGridSize);
+      setCategoryId(quizCategoryId);
       const loadedGridState =
         quizGridData && quizGridData.length > 0
           ? quizGridData
@@ -112,105 +123,152 @@ function HomePageContent() {
       setColorGroups(Array.from(newColorGroups.values()));
     };
 
-    const fetchQuiz = async (id: string) => {
+    const fetchInitialData = async () => {
       setIsLoading(true);
-      const { data: quizData, error: quizError } = await supabase
-        .from("quizzes")
-        .select("title, grid_data, grid_size, user_id")
-        .eq("id", id)
-        .single();
 
-      if (quizError || !quizData) {
-        console.error("Erro ao carregar o questionário:", quizError);
-        router.push("/");
-        return;
-      }
+      const { data: categoriesData } = await supabase
+        .from("template_categories")
+        .select("id, name")
+        .order("order_index");
+      if (categoriesData) setCategories(categoriesData);
 
-      setIsOwner(user?.id === quizData.user_id);
+      if (quizId) {
+        const { data: quizData, error: quizError } = await supabase
+          .from("quizzes")
+          .select("title, grid_data, grid_size, user_id, category_id")
+          .eq("id", quizId)
+          .single();
 
-      const { data: questionsData, error: questionsError } = await supabase
-        .from("questions")
-        .select("color, question_text, answer")
-        .eq("quiz_id", id);
+        if (quizError || !quizData) {
+          router.push("/");
+          return;
+        }
 
-      if (questionsError) {
-        console.error("Erro ao carregar as perguntas:", questionsError);
-        setIsLoading(false);
-        return;
-      }
+        setIsOwner(user?.id === quizData.user_id);
 
-      processAndSetData(
-        quizData.title,
-        quizData.grid_size,
-        quizData.grid_data,
-        questionsData as FetchedQuestion[]
-      );
-      setIsQuizLoaded(true);
-      setIsLoading(false);
-    };
+        const { data: questionsData, error: questionsError } = await supabase
+          .from("questions")
+          .select("color, question_text, answer")
+          .eq("quiz_id", quizId);
 
-    const fetchTemplate = async (id: string) => {
-      setIsLoading(true);
-      const { data: templateData, error: templateError } = await supabase
-        .from("templates")
-        .select("title, grid_size, grid_data")
-        .eq("id", id)
-        .single();
+        if (questionsError) {
+          setIsLoading(false);
+          return;
+        }
 
-      if (templateError || !templateData) {
-        console.error("Erro ao carregar o template:", templateError);
-        router.push("/");
-        return;
-      }
-
-      const { data: questionsData, error: questionsError } = await supabase
-        .from("template_questions")
-        .select("color, question_text, answer")
-        .eq("template_id", id);
-
-      if (questionsError) {
-        console.error(
-          "Erro ao carregar as perguntas do template:",
-          questionsError
+        processAndSetData(
+          quizData.title,
+          quizData.grid_size,
+          quizData.grid_data,
+          questionsData as FetchedQuestion[],
+          quizData.category_id
         );
-        setIsLoading(false);
-        return;
-      }
+        setIsQuizLoaded(true);
+      } else if (templateId) {
+        const { data: templateData, error: templateError } = await supabase
+          .from("templates")
+          .select("title, grid_size, grid_data, category_id")
+          .eq("id", templateId)
+          .single();
 
-      processAndSetData(
-        templateData.title,
-        templateData.grid_size,
-        templateData.grid_data,
-        questionsData as FetchedQuestion[]
-      );
-      setIsOwner(true);
-      setIsQuizLoaded(false);
+        if (templateError || !templateData) {
+          router.push("/");
+          return;
+        }
+
+        const { data: questionsData, error: questionsError } = await supabase
+          .from("template_questions")
+          .select("color, question_text, answer")
+          .eq("template_id", templateId);
+
+        if (questionsError) {
+          setIsLoading(false);
+          return;
+        }
+
+        processAndSetData(
+          templateData.title,
+          templateData.grid_size,
+          templateData.grid_data,
+          questionsData as FetchedQuestion[],
+          templateData.category_id
+        );
+        setIsOwner(true);
+        setIsQuizLoaded(false);
+      } else {
+        setIsOwner(true);
+        if (colorGroups.length === 0) {
+          setColorGroups([
+            {
+              id: Date.now(),
+              color: { name: "Amarelo", value: "#FFFF00" },
+              questions: [{ id: 1, text: "", answer: "" }],
+            },
+          ]);
+        }
+      }
       setIsLoading(false);
     };
 
-    if (quizId) {
-      fetchQuiz(quizId);
-    } else if (templateId) {
-      fetchTemplate(templateId);
-    } else {
-      setIsOwner(true);
-      setIsLoading(false);
-    }
+    fetchInitialData();
   }, [supabase, searchParams, setHistoryState, router, user]);
 
   useEffect(() => {
-    const quizId = searchParams.get("quiz_id");
-    const templateId = searchParams.get("template_id");
-    if (!quizId && !templateId && colorGroups.length === 0 && !isLoading) {
-      setColorGroups([
-        {
-          id: Date.now(),
-          color: { name: "Amarelo", value: "#FFFF00" },
-          questions: [{ id: 1, text: "", answer: "" }],
-        },
-      ]);
+    if (!currentQuizId || !isOwner) {
+      return;
     }
-  }, [searchParams, colorGroups.length, isLoading]);
+
+    const handler = setTimeout(async () => {
+      setAutoSaveStatus("Salvando...");
+
+      const { error: quizError } = await supabase
+        .from("quizzes")
+        .update({ title, grid_data: gridState, category_id: categoryId })
+        .eq("id", currentQuizId);
+
+      if (quizError) {
+        setAutoSaveStatus("Erro ao salvar");
+        return;
+      }
+
+      await supabase.from("questions").delete().eq("quiz_id", currentQuizId);
+
+      const questionsToInsert = colorGroups.flatMap((group) =>
+        group.questions
+          .filter((q) => q.text && q.answer)
+          .map((q) => ({
+            quiz_id: currentQuizId,
+            color: JSON.stringify(group.color),
+            question_text: q.text,
+            answer: q.answer,
+          }))
+      );
+
+      if (questionsToInsert.length > 0) {
+        const { error: questionsError } = await supabase
+          .from("questions")
+          .insert(questionsToInsert);
+        if (questionsError) {
+          setAutoSaveStatus("Erro ao salvar");
+          return;
+        }
+      }
+
+      setAutoSaveStatus("Salvo ✓");
+    }, 2000);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [
+    title,
+    gridState,
+    colorGroups,
+    categoryId,
+    currentQuizId,
+    isOwner,
+    supabase,
+  ]);
 
   useEffect(() => {
     setGridState(historyState);
@@ -312,6 +370,9 @@ function HomePageContent() {
         <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">
           Gerador de Atividades &quot;Pinte por Número&quot;
         </h1>
+        {currentQuizId && isOwner && (
+          <p className="text-sm text-gray-500 mt-2 h-5">{autoSaveStatus}</p>
+        )}
       </header>
       <div className="grid grid-cols-1 lg:grid-cols-[1fr] xl:grid-cols-[380px_1fr_320px] gap-6 items-start">
         <div className="space-y-6">
@@ -337,11 +398,15 @@ function HomePageContent() {
             activeTool={activeTool}
             clearAnswersFromGrid={clearAnswersFromGrid}
             isOwner={isOwner}
+            categories={categories}
+            categoryId={categoryId}
+            setCategoryId={setCategoryId}
           />
         </div>
         <div
           className="self-start"
           onMouseDown={() => {
+            if (!isOwner) return;
             setIsPainting(true);
             gridStateBeforePaint.current = gridState;
           }}
@@ -370,6 +435,7 @@ function HomePageContent() {
           quizId={currentQuizId}
           isOwner={isOwner}
           onNewQuizSaved={onNewQuizSaved}
+          categoryId={categoryId}
         />
       </div>
     </div>

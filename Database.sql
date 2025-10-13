@@ -652,3 +652,10 @@ INSERT INTO public.roadmap_items (id, title, status, order_index) VALUES
   ('22222222-aaaa-bbbb-cccc-000000000008', 'Implementação de Melhorias Visuais (UX)', 'Em Progresso', 8),
   ('22222222-aaaa-bbbb-cccc-000000000009', 'Suporte para Múltiplos Idiomas', 'Planejado', 9)
 ON CONFLICT (id) DO NOTHING;
+
+-- Adiciona a coluna "category_id" à tabela de quizzes.
+-- Esta coluna será uma chave estrangeira que aponta para a tabela de categorias.
+-- ON DELETE SET NULL: Se uma categoria for apagada, os quizzes associados não serão apagados,
+-- apenas ficarão sem categoria (o valor será definido como nulo).
+ALTER TABLE public.quizzes
+ADD COLUMN IF NOT EXISTS category_id UUID REFERENCES public.template_categories(id) ON DELETE SET NULL;

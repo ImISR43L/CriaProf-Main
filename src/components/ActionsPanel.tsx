@@ -15,6 +15,7 @@ interface ActionsPanelProps {
   quizId: string | null;
   onNewQuizSaved: (quizId: string) => void;
   isOwner: boolean;
+  categoryId: string | undefined;
 }
 
 const ActionsPanel = ({
@@ -26,18 +27,37 @@ const ActionsPanel = ({
   quizId,
   onNewQuizSaved,
   isOwner,
+  categoryId,
 }: ActionsPanelProps) => {
   const { supabase, user } = useSupabase();
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState("");
 
   const handleGeneratePdf = () => {
+    // --- NOVA VERIFICAÇÃO DE TÍTULO ---
+    if (!activityTitle || activityTitle.trim() === "") {
+      alert("Por favor, adicione um título à atividade antes de gerar o PDF.");
+      return;
+    }
     generatePdf(activityTitle, colorGroups, gridState, gridSize);
   };
 
   const handleSaveQuiz = async () => {
     if (!user) {
       alert("Você precisa estar logado para salvar um questionário.");
+      return;
+    }
+
+    // --- NOVA VERIFICAÇÃO DE TÍTULO ---
+    if (!activityTitle || activityTitle.trim() === "") {
+      alert("Por favor, adicione um título à atividade antes de salvar.");
+      return;
+    }
+
+    if (!categoryId) {
+      alert(
+        "Por favor, selecione uma categoria antes de salvar o questionário."
+      );
       return;
     }
 
@@ -55,13 +75,13 @@ const ActionsPanel = ({
         }))
     );
 
-    if (quizId) {
-      // ATUALIZAR QUESTIONÁRIO EXISTENTE
+    if (quizId && isOwner) {
       const { error: quizError } = await supabase
         .from("quizzes")
         .update({
           title: activityTitle,
           grid_data: gridState,
+          category_id: categoryId,
         })
         .eq("id", quizId);
 
@@ -85,7 +105,6 @@ const ActionsPanel = ({
       }
       setMessage("Questionário atualizado com sucesso!");
     } else {
-      // CRIAR NOVO QUESTIONÁRIO
       const { data: quizData, error: quizError } = await supabase
         .from("quizzes")
         .insert({
@@ -93,6 +112,7 @@ const ActionsPanel = ({
           grid_data: gridState,
           grid_size: gridSize,
           user_id: user.id,
+          category_id: categoryId,
         })
         .select()
         .single();
@@ -104,6 +124,7 @@ const ActionsPanel = ({
       }
 
       if (questionsToInsert.length > 0) {
+        // @ts-ignore
         const { error: questionsError } = await supabase
           .from("questions")
           .insert(
@@ -116,6 +137,7 @@ const ActionsPanel = ({
         }
       }
       setMessage("Questionário salvo com sucesso!");
+      // @ts-ignore
       onNewQuizSaved(quizData.id);
     }
 
@@ -127,33 +149,35 @@ const ActionsPanel = ({
     <aside className="bg-white p-5 rounded-lg shadow-md h-fit border border-gray-200">
       <h2 className="text-xl font-bold text-gray-900 mb-4">Ações</h2>
       <div className="space-y-3">
-        {user && isOwner && (
-          <button
-            onClick={handleSaveQuiz}
-            disabled={isSaving}
-            className="w-full bg-blue-600 text-white font-bold py-3 rounded-md hover:bg-blue-700 transition-colors disabled:bg-blue-400"
-          >
-            {isSaving
-              ? "A Salvar..."
-              : quizId
-              ? "Salvar Alterações"
-              : "Salvar Questionário"}
-          </button>
-        )}
         <button
           onClick={handleGeneratePdf}
           className="w-full bg-green-600 text-white font-bold py-3 rounded-md hover:bg-green-700 transition-colors"
         >
           Gerar PDF
         </button>
-        {isOwner && (
-          <button
-            onClick={onClearGrid}
-            className="w-full bg-gray-500 text-white font-bold py-3 rounded-md hover:bg-gray-600 transition-colors"
-          >
-            Limpar Grade
-          </button>
+
+        {user && isOwner && (
+          <>
+            <button
+              onClick={handleSaveQuiz}
+              disabled={isSaving}
+              className="w-full bg-blue-600 text-white font-bold py-3 rounded-md hover:bg-blue-700 transition-colors disabled:bg-blue-400"
+            >
+              {isSaving
+                ? "A Salvar..."
+                : quizId
+                ? "Salvar Alterações"
+                : "Salvar Questionário"}
+            </button>
+            <button
+              onClick={onClearGrid}
+              className="w-full bg-gray-500 text-white font-bold py-3 rounded-md hover:bg-gray-600 transition-colors"
+            >
+              Limpar Grade
+            </button>
+          </>
         )}
+
         {message && (
           <p className="text-sm text-center text-green-600 mt-2">{message}</p>
         )}
