@@ -1,18 +1,35 @@
 import { SchoolColor } from "./colors";
 
-// Movemos todas as interfaces partilhadas para este ficheiro
+// Interface para Categorias, agora exportada
+export interface TemplateCategory {
+  id: string;
+  name: string;
+}
+
+// Define o tipo da pergunta
+export type QuestionType = "single" | "multiple";
+
+// Interface para uma opção de resposta individual
+export interface AnswerOption {
+  id: number;
+  text: string;
+  answer: string; // O valor que será pintado na grade
+}
+
+// Interface principal da Pergunta, agora mais completa
 export interface Question {
   id: number;
   text: string;
-  answer: string;
+  type: QuestionType;
+  options: AnswerOption[];
+  correctOptionId: number;
+  // Para perguntas de escolha única, a cor fica aqui
+  color?: SchoolColor;
+  // Para múltipla escolha, cada opção terá sua cor
+  optionColors?: { [optionId: number]: SchoolColor };
 }
 
-export interface ColorGroup {
-  id: number;
-  color: SchoolColor;
-  questions: Question[];
-}
-
+// Ferramenta ativa para pintura na grade
 export interface ActiveTool {
   answer: string;
   color: SchoolColor;

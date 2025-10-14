@@ -1,19 +1,13 @@
-// src/components/ControlPanel.tsx
 import React from "react";
-import ColorBlock from "./ColorBlock";
-import { schoolColorPalette } from "@/lib/colors";
-import type { ColorGroup, ActiveTool, Question } from "@/lib/types";
-
-interface TemplateCategory {
-  id: string;
-  name: string;
-}
+import QuestionBlock from "./QuestionBlock";
+import { schoolColorPalette, SchoolColor } from "@/lib/colors";
+import type { Question, ActiveTool, TemplateCategory } from "@/lib/types";
 
 interface ControlPanelProps {
   title: string;
   setTitle: (title: string) => void;
-  colorGroups: ColorGroup[];
-  setColorGroups: React.Dispatch<React.SetStateAction<ColorGroup[]>>;
+  questions: Question[];
+  setQuestions: React.Dispatch<React.SetStateAction<Question[]>>;
   duplicateAnswers: Set<string>;
   setActiveTool: (tool: ActiveTool | null) => void;
   activeTool: ActiveTool | null;
@@ -22,13 +16,14 @@ interface ControlPanelProps {
   categories: TemplateCategory[];
   categoryId: string | undefined;
   setCategoryId: (id: string) => void;
+  isTemplateEditor?: boolean;
 }
 
 const ControlPanel = ({
   title,
   setTitle,
-  colorGroups,
-  setColorGroups,
+  questions,
+  setQuestions,
   duplicateAnswers,
   setActiveTool,
   activeTool,
@@ -37,52 +32,53 @@ const ControlPanel = ({
   categories,
   categoryId,
   setCategoryId,
+  isTemplateEditor = false,
 }: ControlPanelProps) => {
-  let questionCounter = 0;
-  const usedColorValues = new Set(colorGroups.map((g) => g.color.value));
-
-  const handleAddColor = () => {
-    if (!isOwner) return;
-    const nextColor = schoolColorPalette.find(
-      (c) => !usedColorValues.has(c.value)
-    );
-    if (!nextColor) {
-      alert("Todas as cores disponíveis já foram adicionadas.");
-      return;
+  const usedColorValues = new Set<string>();
+  questions.forEach((q) => {
+    if (q.type === "single" && q.color) {
+      usedColorValues.add(q.color.value);
+    } else if (q.type === "multiple" && q.optionColors) {
+      Object.values(q.optionColors).forEach((color) =>
+        usedColorValues.add(color.value)
+      );
     }
-    const newColorGroup: ColorGroup = {
+  });
+
+  const handleAddQuestion = () => {
+    if (!isOwner) return;
+    const nextColor =
+      schoolColorPalette.find(
+        (c: SchoolColor) => !usedColorValues.has(c.value)
+      ) || schoolColorPalette[0];
+    const newQuestion: Question = {
       id: Date.now(),
+      text: "",
+      type: "single",
+      options: [{ id: Date.now() + 1, text: "", answer: "" }],
+      correctOptionId: Date.now() + 1,
       color: nextColor,
-      questions: [{ id: 1, text: "", answer: "" }],
     };
-    setColorGroups([...colorGroups, newColorGroup]);
+    setQuestions([...questions, newQuestion]);
   };
 
-  const handleColorGroupChange = (updatedGroup: ColorGroup) => {
+  const handleQuestionChange = (updatedQuestion: Question) => {
     if (!isOwner) return;
-    setColorGroups(
-      colorGroups.map((group) =>
-        group.id === updatedGroup.id ? updatedGroup : group
-      )
+    setQuestions(
+      questions.map((q) => (q.id === updatedQuestion.id ? updatedQuestion : q))
     );
   };
 
-  const handleRemoveColor = (id: number) => {
-    if (!isOwner || colorGroups.length <= 1) return;
-    const groupToRemove = colorGroups.find((g) => g.id === id);
-    if (groupToRemove) {
-      const answersToClear = groupToRemove.questions
-        .map((q) => q.answer)
+  const handleRemoveQuestion = (idToRemove: number) => {
+    if (!isOwner || questions.length <= 1) return;
+    const questionToRemove = questions.find((q) => q.id === idToRemove);
+    if (questionToRemove) {
+      const answersToClear = questionToRemove.options
+        .map((opt) => opt.answer)
         .filter(Boolean);
       clearAnswersFromGrid(answersToClear);
     }
-    setColorGroups(colorGroups.filter((group) => group.id !== id));
-  };
-
-  const handleRemoveQuestion = (questionToRemove: Question) => {
-    if (questionToRemove.answer.trim() !== "") {
-      clearAnswersFromGrid([questionToRemove.answer]);
-    }
+    setQuestions(questions.filter((q) => q.id !== idToRemove));
   };
 
   return (
@@ -108,60 +104,56 @@ const ControlPanel = ({
             disabled={!isOwner}
           />
         </div>
-
-        <div>
-          <label
-            htmlFor="category"
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
-            Categoria
-          </label>
-          <select
-            id="category"
-            value={categoryId || ""}
-            onChange={(e) => setCategoryId(e.target.value)}
-            disabled={!isOwner}
-            className="w-full p-2 border border-gray-300 rounded-md bg-white text-gray-900 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-          >
-            <option value="" disabled>
-              Selecione uma categoria
-            </option>
-            {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.name}
+        {!isTemplateEditor && (
+          <div>
+            <label
+              htmlFor="category"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Categoria
+            </label>
+            <select
+              id="category"
+              value={categoryId || ""}
+              onChange={(e) => setCategoryId(e.target.value)}
+              disabled={!isOwner}
+              className="w-full p-2 border border-gray-300 rounded-md bg-white text-gray-900 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+            >
+              <option value="" disabled>
+                Selecione uma categoria
               </option>
-            ))}
-          </select>
-        </div>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
       <div className="max-h-[50vh] overflow-y-auto pr-2">
-        {colorGroups.map((group) => {
-          const baseReferenceNumber = questionCounter + 1;
-          questionCounter += group.questions.length;
-          return (
-            <ColorBlock
-              key={group.id}
-              group={group}
-              onChange={handleColorGroupChange}
-              onRemove={handleRemoveColor}
-              onRemoveQuestion={handleRemoveQuestion}
-              canBeRemoved={colorGroups.length > 1}
-              baseReferenceNumber={baseReferenceNumber}
-              duplicateAnswers={duplicateAnswers}
-              usedColorValues={usedColorValues}
-              setActiveTool={setActiveTool}
-              activeTool={activeTool}
-              disabled={!isOwner}
-            />
-          );
-        })}
+        {questions.map((question, index) => (
+          <QuestionBlock
+            key={question.id}
+            question={question}
+            onChange={handleQuestionChange}
+            onRemove={handleRemoveQuestion}
+            canBeRemoved={questions.length > 1}
+            baseReferenceNumber={index + 1}
+            duplicateAnswers={duplicateAnswers}
+            usedColorValues={usedColorValues}
+            setActiveTool={setActiveTool}
+            activeTool={activeTool}
+            disabled={!isOwner}
+          />
+        ))}
       </div>
-      {isOwner && colorGroups.length < schoolColorPalette.length && (
+      {isOwner && (
         <button
-          onClick={handleAddColor}
+          onClick={handleAddQuestion}
           className="w-full mt-4 p-2 border-2 border-dashed border-gray-400 rounded-md text-gray-600 font-semibold hover:bg-gray-100 hover:border-gray-500 transition-colors"
         >
-          + Adicionar Cor
+          + Adicionar Pergunta
         </button>
       )}
     </aside>

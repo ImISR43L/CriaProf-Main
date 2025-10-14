@@ -2,14 +2,14 @@
 "use client";
 
 import React, { useState } from "react";
-import type { ColorGroup } from "@/lib/types";
+import type { Question } from "@/lib/types";
 import { generatePdf } from "@/lib/pdfGenerator";
 import { useSupabase } from "@/components/AuthProvider";
 
 interface ActionsPanelProps {
   onClearGrid: () => void;
   activityTitle: string;
-  colorGroups: ColorGroup[];
+  questions: Question[]; // Alterado de colorGroups para questions
   gridState: string[];
   gridSize: number;
   quizId: string | null;
@@ -21,7 +21,7 @@ interface ActionsPanelProps {
 const ActionsPanel = ({
   onClearGrid,
   activityTitle,
-  colorGroups,
+  questions, // Usa a nova prop
   gridState,
   gridSize,
   quizId,
@@ -38,7 +38,9 @@ const ActionsPanel = ({
       alert("Por favor, adicione um título à atividade antes de gerar o PDF.");
       return;
     }
-    generatePdf(activityTitle, colorGroups, gridState, gridSize);
+    // A função generatePdf também precisará ser refatorada,
+    // mas por agora, a chamada é atualizada.
+    generatePdf(activityTitle, questions, gridState, gridSize);
   };
 
   const handleSaveQuiz = async () => {
@@ -46,12 +48,10 @@ const ActionsPanel = ({
       alert("Você precisa estar logado para salvar um questionário.");
       return;
     }
-
     if (!activityTitle || activityTitle.trim() === "") {
       alert("Por favor, adicione um título à atividade antes de salvar.");
       return;
     }
-
     if (!categoryId) {
       alert(
         "Por favor, selecione uma categoria antes de salvar o questionário."
@@ -62,83 +62,26 @@ const ActionsPanel = ({
     setIsSaving(true);
     setMessage("");
 
-    const questionsToInsert = colorGroups.flatMap((group) =>
-      group.questions
-        .filter((q) => q.text && q.answer)
-        .map((q) => ({
-          quiz_id: quizId,
-          color: JSON.stringify(group.color),
-          question_text: q.text,
-          answer: q.answer,
-        }))
+    // A lógica para salvar as perguntas precisará ser migrada no backend
+    // para a nova estrutura de tabelas (questions e answer_options).
+    // O código abaixo é uma representação conceitual de como os dados seriam preparados.
+
+    console.log("Dados a serem salvos:", {
+      title: activityTitle,
+      grid_data: gridState,
+      grid_size: gridSize,
+      category_id: categoryId,
+      questions: questions,
+    });
+
+    // Lógica de salvar (precisará de adaptação no futuro quando o DB for migrado)
+    setMessage(
+      "Funcionalidade de salvar em desenvolvimento para a nova estrutura."
     );
-
-    if (quizId && isOwner) {
-      const { error: quizError } = await supabase
-        .from("quizzes")
-        .update({
-          title: activityTitle,
-          grid_data: gridState,
-          category_id: categoryId,
-        })
-        .eq("id", quizId);
-
-      if (quizError) {
-        setMessage(`Erro ao atualizar: ${quizError.message}`);
-        setIsSaving(false);
-        return;
-      }
-
-      await supabase.from("questions").delete().eq("quiz_id", quizId);
-
-      if (questionsToInsert.length > 0) {
-        const { error: questionsError } = await supabase
-          .from("questions")
-          .insert(questionsToInsert.map((q) => ({ ...q, quiz_id: quizId })));
-        if (questionsError) {
-          setMessage(`Erro ao salvar perguntas: ${questionsError.message}`);
-          setIsSaving(false);
-          return;
-        }
-      }
-      setMessage("Questionário atualizado com sucesso!");
-    } else {
-      const { data: quizData, error: quizError } = await supabase
-        .from("quizzes")
-        .insert({
-          title: activityTitle,
-          grid_data: gridState,
-          grid_size: gridSize,
-          user_id: user.id,
-          category_id: categoryId,
-        })
-        .select()
-        .single();
-
-      if (quizError) {
-        setMessage(`Erro ao salvar: ${quizError.message}`);
-        setIsSaving(false);
-        return;
-      }
-
-      if (questionsToInsert.length > 0) {
-        const { error: questionsError } = await supabase
-          .from("questions")
-          .insert(
-            questionsToInsert.map((q) => ({ ...q, quiz_id: quizData.id }))
-          );
-        if (questionsError) {
-          setMessage(`Erro ao salvar perguntas: ${questionsError.message}`);
-          setIsSaving(false);
-          return;
-        }
-      }
-      setMessage("Questionário salvo com sucesso!");
-      onNewQuizSaved(quizData.id);
-    }
-
-    setIsSaving(false);
-    setTimeout(() => setMessage(""), 3000);
+    setTimeout(() => {
+      setIsSaving(false);
+      setMessage("");
+    }, 3000);
   };
 
   return (

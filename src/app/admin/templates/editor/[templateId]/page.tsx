@@ -4,18 +4,20 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSupabase } from "@/components/AuthProvider";
-import type { ColorGroup, ActiveTool } from "@/lib/types";
+import type { Question, ActiveTool, TemplateCategory } from "@/lib/types";
 import Spinner from "@/components/Spinner";
 import ControlPanel from "@/components/ControlPanel";
 import InteractiveGrid from "@/components/InteractiveGrid";
 import BrushPanel from "@/components/BrushPanel";
 import GridSizeSelector from "@/components/GridSizeSelector";
 import { useHistory } from "@/hooks/useHistory";
+import { schoolColorPalette, SchoolColor } from "@/lib/colors";
 
-interface TemplateCategory {
-  id: string;
-  name: string;
-}
+type FetchedOldQuestion = {
+  color: string;
+  question_text: string;
+  answer: string;
+};
 
 export default function TemplateEditorPage() {
   const { supabase, profile } = useSupabase();
@@ -28,11 +30,10 @@ export default function TemplateEditorPage() {
   const [description, setDescription] = useState("");
   const [categoryId, setCategoryId] = useState<string | undefined>();
   const [categories, setCategories] = useState<TemplateCategory[]>([]);
-  const [colorGroups, setColorGroups] = useState<ColorGroup[]>([]);
+  const [questions, setQuestions] = useState<Question[]>([]);
   const [gridSize, setGridSize] = useState(15);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-
   const [activeTool, setActiveTool] = useState<ActiveTool | null>(null);
   const [isEraserActive, setIsEraserActive] = useState(false);
   const [brushSize, setBrushSize] = useState(1);
@@ -65,11 +66,14 @@ export default function TemplateEditorPage() {
 
       if (isNewTemplate) {
         setHistoryState(Array(gridSize * gridSize).fill(""), true);
-        setColorGroups([
+        setQuestions([
           {
             id: Date.now(),
-            color: { name: "Amarelo", value: "#FFFF00" },
-            questions: [{ id: 1, text: "", answer: "" }],
+            text: "",
+            type: "single",
+            options: [{ id: Date.now() + 1, text: "", answer: "" }],
+            correctOptionId: Date.now() + 1,
+            color: schoolColorPalette[0],
           },
         ]);
         setLoading(false);
@@ -83,7 +87,6 @@ export default function TemplateEditorPage() {
           router.push("/admin/templates");
           return;
         }
-
         const { data: questionsData } = await supabase
           .from("template_questions")
           .select("*")
@@ -99,29 +102,35 @@ export default function TemplateEditorPage() {
           true
         );
 
-        const newColorGroups = new Map<string, ColorGroup>();
-        (questionsData || []).forEach((q, index) => {
-          const colorObj = JSON.parse(q.color);
-          if (!newColorGroups.has(colorObj.value)) {
-            newColorGroups.set(colorObj.value, {
-              id: Date.now() + index * 1000,
-              color: colorObj,
-              questions: [],
-            });
-          }
-          newColorGroups
-            .get(colorObj.value)!
-            .questions.push({
-              id: Date.now() + index,
-              text: q.question_text,
-              answer: q.answer,
-            });
+        const newQuestions: Question[] = [];
+        const colorMap = new Map<
+          string,
+          { color: SchoolColor; items: FetchedOldQuestion[] }
+        >();
+        ((questionsData as FetchedOldQuestion[]) || []).forEach((q) => {
+          const colorObj = JSON.parse(q.color) as SchoolColor;
+          if (!colorMap.has(colorObj.value))
+            colorMap.set(colorObj.value, { color: colorObj, items: [] });
+          colorMap.get(colorObj.value)!.items.push(q);
         });
-        setColorGroups(Array.from(newColorGroups.values()));
+        Array.from(colorMap.values()).forEach((group) => {
+          group.items.forEach((item, index) => {
+            newQuestions.push({
+              id: Date.now() + index,
+              text: item.question_text,
+              type: "single",
+              options: [
+                { id: Date.now() + index + 1, text: "", answer: item.answer },
+              ],
+              correctOptionId: Date.now() + index + 1,
+              color: group.color,
+            });
+          });
+        });
+        setQuestions(newQuestions);
         setLoading(false);
       }
     };
-
     if (profile?.role === "admin") {
       fetchInitialData();
     }
@@ -141,103 +150,47 @@ export default function TemplateEditorPage() {
       return;
     }
     setSaving(true);
-
-    const templateData = {
-      title,
-      description,
-      category_id: categoryId,
-      grid_size: gridSize,
-      grid_data: gridState,
-    };
-
-    let currentTemplateId = templateId;
-    if (isNewTemplate) {
-      const { data: newTemplate, error } = await supabase
-        .from("templates")
-        .insert(templateData)
-        .select()
-        .single();
-      if (error || !newTemplate) {
-        alert(`Erro ao criar template: ${error?.message}`);
-        setSaving(false);
-        return;
-      }
-      currentTemplateId = newTemplate.id;
-    } else {
-      const { error } = await supabase
-        .from("templates")
-        .update(templateData)
-        .eq("id", templateId);
-      if (error) {
-        alert(`Erro ao atualizar template: ${error.message}`);
-        setSaving(false);
-        return;
-      }
-      await supabase
-        .from("template_questions")
-        .delete()
-        .eq("template_id", templateId);
-    }
-    const questionsToInsert = colorGroups.flatMap((group) =>
-      group.questions
-        .filter((q) => q.text && q.answer)
-        .map((q) => ({
-          template_id: currentTemplateId,
-          color: JSON.stringify(group.color),
-          question_text: q.text,
-          answer: q.answer,
-        }))
+    alert(
+      "Funcionalidade de salvar template em desenvolvimento para a nova estrutura."
     );
-    if (questionsToInsert.length > 0) {
-      const { error } = await supabase
-        .from("template_questions")
-        .insert(questionsToInsert);
-      if (error) {
-        alert(`Erro ao salvar perguntas: ${error.message}`);
-        setSaving(false);
-        return;
-      }
-    }
-    alert("Template salvo com sucesso!");
+    setSaving(false);
     router.push("/admin/templates");
-    router.refresh();
   };
 
-  const resetActiveToolIfNeeded = (removedAnswers: string[]) => {
-    if (activeTool && removedAnswers.includes(activeTool.answer)) {
-      setActiveTool(null);
-    }
-  };
-  const checkForDuplicates = useCallback((groups: ColorGroup[]) => {
+  const checkForDuplicates = useCallback((qs: Question[]) => {
     const answerCounts = new Map<string, number>();
-    groups.forEach((group) => {
-      group.questions.forEach((q) => {
-        if (q.answer.trim() !== "") {
-          answerCounts.set(q.answer, (answerCounts.get(q.answer) || 0) + 1);
-        }
-      });
-    });
+    qs.forEach((q) =>
+      q.options.forEach((opt) => {
+        if (opt.answer.trim())
+          answerCounts.set(opt.answer, (answerCounts.get(opt.answer) || 0) + 1);
+      })
+    );
     const duplicates = new Set<string>();
     for (const [answer, count] of answerCounts.entries()) {
-      if (count > 1) {
-        duplicates.add(answer);
-      }
+      if (count > 1) duplicates.add(answer);
     }
     setDuplicateAnswers(duplicates);
   }, []);
+
   useEffect(() => {
-    checkForDuplicates(colorGroups);
-  }, [colorGroups, checkForDuplicates]);
-  const clearAnswersFromGrid = (answersToClear: string[]) => {
-    if (answersToClear.length === 0) return;
-    resetActiveToolIfNeeded(answersToClear);
-    const answersSet = new Set(answersToClear);
-    const newGridState = gridState.map((cell) =>
-      answersSet.has(cell) ? "" : cell
-    );
-    setGridState(newGridState);
-    setHistoryState(newGridState);
-  };
+    checkForDuplicates(questions);
+  }, [questions, checkForDuplicates]);
+
+  const clearAnswersFromGrid = useCallback(
+    (answersToClear: string[]) => {
+      if (answersToClear.length === 0) return;
+      if (activeTool && answersToClear.includes(activeTool.answer))
+        setActiveTool(null);
+      const answersSet = new Set(answersToClear);
+      const newGridState = gridState.map((cell) =>
+        answersSet.has(cell) ? "" : cell
+      );
+      setGridState(newGridState);
+      setHistoryState(newGridState);
+    },
+    [activeTool, gridState, setHistoryState]
+  );
+
   const paintCells = (index: number) => {
     setGridState((currentGrid) => {
       const newGridState = [...currentGrid];
@@ -258,6 +211,7 @@ export default function TemplateEditorPage() {
       return newGridState;
     });
   };
+
   const handleSetTool = (tool: ActiveTool | null) => {
     setActiveTool(tool);
     setIsEraserActive(false);
@@ -267,15 +221,42 @@ export default function TemplateEditorPage() {
     setActiveTool(null);
   };
   const handleMouseUp = () => {
-    setIsPainting(false);
-    if (
-      JSON.stringify(gridState) !== JSON.stringify(gridStateBeforePaint.current)
-    ) {
-      setHistoryState(gridState);
+    if (isPainting) {
+      setIsPainting(false);
+      if (
+        JSON.stringify(gridState) !==
+        JSON.stringify(gridStateBeforePaint.current)
+      )
+        setHistoryState(gridState);
     }
   };
 
   if (loading || !profile || profile.role !== "admin") return <Spinner />;
+
+  const answerToColorMap = new Map<string, string>();
+  const answerToQuestionRefMap = new Map<string, string>();
+  questions.forEach((question, index) => {
+    const questionRef = `Q${index + 1}`;
+    if (
+      question.type === "single" &&
+      question.color &&
+      question.options[0]?.answer
+    ) {
+      answerToColorMap.set(question.options[0].answer, question.color.value);
+      answerToQuestionRefMap.set(
+        question.options[0].answer,
+        question.options[0].answer
+      );
+    } else if (question.type === "multiple" && question.optionColors) {
+      question.options.forEach((option) => {
+        const color = question.optionColors?.[option.id];
+        if (color && option.answer) {
+          answerToColorMap.set(option.answer, color.value);
+          answerToQuestionRefMap.set(option.answer, questionRef);
+        }
+      });
+    }
+  });
 
   return (
     <div className="container mx-auto p-4 sm:p-6 lg:p-8">
@@ -287,47 +268,56 @@ export default function TemplateEditorPage() {
       <div className="grid grid-cols-1 lg:grid-cols-[1fr] xl:grid-cols-[380px_1fr_320px] gap-6 items-start">
         <div className="space-y-6">
           <div className="bg-white p-5 rounded-lg shadow-md h-fit border border-gray-200">
-            <div className="mb-4">
-              <label
-                htmlFor="category"
-                className="block text-sm font-bold text-gray-700 mb-2"
-              >
-                Categoria
-              </label>
-              <select
-                id="category"
-                value={categoryId || ""}
-                onChange={(e) => setCategoryId(e.target.value)}
-                className="w-full p-2 border border-gray-300 rounded-md bg-white text-gray-900 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="" disabled>
-                  Selecione uma categoria
-                </option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.name}
+            <h2 className="text-xl font-bold text-gray-900 mb-4">
+              Detalhes do Template
+            </h2>
+            <div className="space-y-4">
+              <div>
+                <label
+                  htmlFor="category"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Categoria
+                </label>
+                <select
+                  id="category"
+                  value={categoryId || ""}
+                  onChange={(e) => setCategoryId(e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-md bg-white focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="" disabled>
+                    Selecione...
                   </option>
-                ))}
-              </select>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label
+                  htmlFor="description"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Descrição
+                </label>
+                <textarea
+                  id="description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Descreva o objetivo deste template."
+                  rows={3}
+                  className="w-full p-2 border border-gray-300 rounded-md bg-white focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
             </div>
-
-            <label className="block text-sm font-bold text-gray-700 mb-2">
-              Descrição
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Descreva o objetivo deste template."
-              rows={3}
-              className="w-full p-2 border border-gray-300 rounded-md bg-white text-gray-900 focus:ring-blue-500 focus:border-blue-500"
-            />
           </div>
-          {/* CORREÇÃO APLICADA AQUI */}
           <ControlPanel
             title={title}
             setTitle={setTitle}
-            colorGroups={colorGroups}
-            setColorGroups={setColorGroups}
+            questions={questions}
+            setQuestions={setQuestions}
             duplicateAnswers={duplicateAnswers}
             setActiveTool={handleSetTool}
             activeTool={activeTool}
@@ -336,9 +326,9 @@ export default function TemplateEditorPage() {
             categories={categories}
             categoryId={categoryId}
             setCategoryId={setCategoryId}
+            isTemplateEditor={true}
           />
         </div>
-
         <div
           onMouseDown={() => {
             setIsPainting(true);
@@ -350,12 +340,12 @@ export default function TemplateEditorPage() {
           <InteractiveGrid
             gridState={gridState || []}
             gridSize={gridSize}
-            colorGroups={colorGroups}
+            answerToColorMap={answerToColorMap}
+            answerToQuestionRefMap={answerToQuestionRefMap}
             paintCells={paintCells}
             isPainting={isPainting}
           />
         </div>
-
         <div className="space-y-6">
           <div className="bg-white p-5 rounded-lg shadow-md h-fit border border-gray-200">
             <GridSizeSelector
@@ -385,13 +375,13 @@ export default function TemplateEditorPage() {
               <button
                 onClick={handleSaveTemplate}
                 disabled={saving}
-                className="w-full bg-blue-600 text-white font-bold py-3 rounded-md hover:bg-blue-700 transition-colors disabled:bg-blue-400"
+                className="w-full bg-blue-600 text-white font-bold py-3 rounded-md hover:bg-blue-700 disabled:bg-blue-400"
               >
                 {saving ? "A salvar..." : "Salvar Template"}
               </button>
               <button
                 onClick={() => router.push("/admin/templates")}
-                className="w-full bg-gray-500 text-white font-bold py-3 rounded-md hover:bg-gray-600 transition-colors"
+                className="w-full bg-gray-500 text-white font-bold py-3 rounded-md hover:bg-gray-600"
               >
                 Cancelar
               </button>

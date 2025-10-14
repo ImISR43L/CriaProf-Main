@@ -1,11 +1,11 @@
 import React from "react";
-import type { ColorGroup } from "@/lib/types";
 import { getContrastColor } from "@/lib/utils";
 
 interface InteractiveGridProps {
   gridState: string[];
   gridSize: number;
-  colorGroups: ColorGroup[];
+  answerToColorMap: Map<string, string>;
+  answerToQuestionRefMap: Map<string, string>; // Nova propriedade
   paintCells: (index: number) => void;
   isPainting: boolean;
 }
@@ -13,7 +13,8 @@ interface InteractiveGridProps {
 const InteractiveGrid = ({
   gridState,
   gridSize,
-  colorGroups,
+  answerToColorMap,
+  answerToQuestionRefMap, // Usando a nova propriedade
   paintCells,
   isPainting,
 }: InteractiveGridProps) => {
@@ -21,15 +22,6 @@ const InteractiveGrid = ({
     gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))`,
     gridTemplateRows: `repeat(${gridSize}, minmax(0, 1fr))`,
   };
-
-  const answerToColorMap = new Map<string, string>();
-  colorGroups.forEach((group) => {
-    group.questions.forEach((q) => {
-      if (q.answer.trim() !== "") {
-        answerToColorMap.set(q.answer, group.color.value);
-      }
-    });
-  });
 
   return (
     <section className="bg-white p-5 rounded-lg shadow-md border border-gray-200">
@@ -45,25 +37,23 @@ const InteractiveGrid = ({
       >
         {gridState.map((cellValue, index) => {
           const bgColor = answerToColorMap.get(cellValue) || "#FFFFFF";
-          // Usar a nossa função para obter a cor de texto com melhor contraste
           const textColor = getContrastColor(bgColor);
+          // LÓGICA ALTERADA: Decide qual texto exibir
+          const displayText =
+            answerToQuestionRefMap.get(cellValue) || cellValue;
 
           return (
             <div
               key={index}
               onMouseDown={() => paintCells(index)}
-              onMouseEnter={() => {
-                if (isPainting) {
-                  paintCells(index);
-                }
-              }}
-              className="w-full h-full text-center text-sm p-0 border-r border-b border-gray-400 select-none cursor-pointer flex items-center justify-center"
+              onMouseEnter={() => isPainting && paintCells(index)}
+              className="w-full h-full text-center text-xs p-0 border-r border-b border-gray-400 select-none cursor-pointer flex items-center justify-center font-bold"
               style={{
                 backgroundColor: bgColor,
                 color: textColor,
               }}
             >
-              {cellValue}
+              {displayText}
             </div>
           );
         })}

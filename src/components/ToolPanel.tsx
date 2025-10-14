@@ -4,12 +4,12 @@
 import React from "react";
 import ActionsPanel from "./ActionsPanel";
 import BrushPanel from "./BrushPanel";
-import type { ColorGroup, ActiveTool } from "@/lib/types";
+import type { Question, ActiveTool } from "@/lib/types"; // Importa Question
 
 interface ToolPanelProps {
   onClearGrid: () => void;
   activityTitle: string;
-  colorGroups: ColorGroup[];
+  questions: Question[]; // Alterado de colorGroups para questions
   gridState: string[];
   gridSize: number;
   activeTool: ActiveTool | null;
@@ -38,7 +38,7 @@ const ToolPanel = (props: ToolPanelProps) => {
       <ActionsPanel
         onClearGrid={props.onClearGrid}
         activityTitle={props.activityTitle}
-        colorGroups={props.colorGroups}
+        questions={props.questions} // Passa a nova prop 'questions'
         gridState={props.gridState}
         gridSize={props.gridSize}
         quizId={props.quizId}
