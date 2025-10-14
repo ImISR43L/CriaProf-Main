@@ -10,28 +10,37 @@ import { useSupabase } from "@/components/AuthProvider";
 import Spinner from "@/components/Spinner";
 import type { Question, ActiveTool, TemplateCategory } from "@/lib/types";
 import { useHistory } from "@/hooks/useHistory";
-import { schoolColorPalette } from "@/lib/colors";
+import { schoolColorPalette, SchoolColor } from "@/lib/colors";
 
-// Tipo de dados simulado vindo do Supabase
-type FetchedDBQuestion = {
+// Tipos para dados do Supabase
+type FetchedOption = {
+  id: number;
+  text: string;
+  answer: string;
+  color: string;
+};
+type FetchedQuestion = {
   id: number;
   text: string;
   type: "single" | "multiple";
   correct_option_id: number;
-  options: {
-    id: number;
-    text: string;
-    answer: string;
-  }[];
-  color?: string;
-  option_colors?: string;
+  template_answer_options: FetchedOption[];
+};
+type SupabasePayload<T> = {
+  title: string;
+  grid_size: number;
+  grid_data: string[] | null;
+  category_id?: string;
+  user_id?: string;
+  questions: T[];
+  template_questions: T[];
 };
 
 function HomePageContent() {
   const { supabase, user } = useSupabase();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState("Atividade Sem Título");
   const [questions, setQuestions] = useState<Question[]>([]);
   const [gridSize, setGridSize] = useState(15);
   const {
@@ -57,35 +66,54 @@ function HomePageContent() {
   const [categories, setCategories] = useState<TemplateCategory[]>([]);
   const [categoryId, setCategoryId] = useState<string | undefined>();
 
-  const resetActiveToolIfNeeded = useCallback(
-    (removedAnswers: string[]) => {
-      if (activeTool && removedAnswers.includes(activeTool.answer)) {
-        setActiveTool(null);
-      }
-    },
-    [activeTool]
-  );
-
-  const checkForDuplicates = useCallback((qs: Question[]) => {
-    const answerCounts = new Map<string, number>();
-    qs.forEach((q) =>
-      q.options.forEach((opt) => {
-        if (opt.answer.trim())
-          answerCounts.set(opt.answer, (answerCounts.get(opt.answer) || 0) + 1);
-      })
-    );
-    const duplicates = new Set<string>();
-    for (const [answer, count] of answerCounts.entries()) {
-      if (count > 1) duplicates.add(answer);
-    }
-    setDuplicateAnswers(duplicates);
-  }, []);
-
   useEffect(() => {
-    checkForDuplicates(questions);
-  }, [questions, checkForDuplicates]);
+    // A função agora é definida DENTRO do useEffect
+    const processAndSetData = (
+      dataTitle: string,
+      dataGridSize: number,
+      dataGridData: string[] | null,
+      dataQuestions: FetchedQuestion[],
+      dataCategoryId?: string
+    ) => {
+      setTitle(dataTitle);
+      setGridSize(dataGridSize);
+      setCategoryId(dataCategoryId);
+      const loadedGridState =
+        dataGridData || Array(dataGridSize * dataGridSize).fill("");
+      setHistoryState(loadedGridState, true);
 
-  useEffect(() => {
+      const newQuestions: Question[] = dataQuestions.map((q) => {
+        const options = q.template_answer_options.map((opt) => ({
+          id: opt.id,
+          text: opt.text,
+          answer: opt.answer,
+        }));
+        let color: SchoolColor | undefined;
+        let optionColors: Record<number, SchoolColor> | undefined;
+
+        if (q.type === "single") {
+          color = q.template_answer_options[0]
+            ? JSON.parse(q.template_answer_options[0].color)
+            : undefined;
+        } else {
+          optionColors = {};
+          q.template_answer_options.forEach((opt) => {
+            optionColors![opt.id] = JSON.parse(opt.color);
+          });
+        }
+        return {
+          id: q.id,
+          text: q.text,
+          type: q.type,
+          options,
+          correctOptionId: q.correct_option_id,
+          color,
+          optionColors,
+        };
+      });
+      setQuestions(newQuestions);
+    };
+
     const fetchInitialData = async () => {
       setIsLoading(true);
       const quizId = searchParams.get("quiz_id");
@@ -98,18 +126,47 @@ function HomePageContent() {
       if (categoriesData) setCategories(categoriesData);
 
       if (quizId) {
-        // A busca no Supabase precisará de JOINs para a nova estrutura de tabelas
-        // Esta é uma simulação da lógica de carregamento
         setCurrentQuizId(quizId);
-        // Exemplo: const { data: quizData } = await supabase.from("quizzes")...
-        // Por agora, vamos simular que não encontrou nada para evitar erros
-        setIsOwner(false); // Assumindo que o quiz carregado pode não ser do usuário
-        setIsQuizLoaded(true);
+        const { data: quizData } = await supabase
+          .from("quizzes")
+          .select(`*, questions(*, answer_options(*))`)
+          .eq("id", quizId)
+          .single<SupabasePayload<FetchedQuestion>>();
+        if (quizData) {
+          setIsOwner(user?.id === quizData.user_id);
+          processAndSetData(
+            quizData.title,
+            quizData.grid_size,
+            quizData.grid_data,
+            quizData.questions,
+            quizData.category_id
+          );
+          setIsQuizLoaded(true);
+        } else {
+          router.push("/");
+        }
       } else if (templateId) {
-        // Lógica para carregar de um template
-        setIsOwner(true); // O usuário se torna "dono" de uma cópia do template
+        const { data: templateData, error } = await supabase
+          .from("templates")
+          .select("*, template_questions(*, template_answer_options(*))")
+          .eq("id", templateId)
+          .single<SupabasePayload<FetchedQuestion>>();
+        if (error || !templateData) {
+          router.push("/");
+          return;
+        }
+
+        processAndSetData(
+          templateData.title,
+          templateData.grid_size,
+          templateData.grid_data,
+          templateData.template_questions,
+          templateData.category_id
+        );
+        setIsOwner(true);
+        setIsQuizLoaded(false);
+        setCurrentQuizId(null);
       } else {
-        // Nova atividade, o usuário é o dono
         setIsOwner(true);
         setQuestions([
           {
@@ -121,29 +178,22 @@ function HomePageContent() {
             color: schoolColorPalette[0],
           },
         ]);
+        setHistoryState(Array(gridSize * gridSize).fill(""), true);
       }
       setIsLoading(false);
     };
 
     fetchInitialData();
-  }, [supabase, searchParams, user, router, setHistoryState]);
+    // O array de dependências agora inclui as funções 'set' que a função interna 'processAndSetData' utiliza.
+  }, [supabase, searchParams, user, router, gridSize, setHistoryState]);
 
-  // Auto-save logic
   useEffect(() => {
     if (!currentQuizId || !isOwner) return;
-
-    setAutoSaveStatus("Aguardando alterações...");
     const handler = setTimeout(async () => {
       setAutoSaveStatus("Salvando...");
-      // Lógica de update no Supabase iria aqui
-      // await supabase.from("quizzes").update({ title, grid_data: gridState, ... }).eq("id", currentQuizId);
-      // await supabase.from("questions").upsert(questions.map(...));
-
-      // Simula a chamada de API
       await new Promise((resolve) => setTimeout(resolve, 1500));
       setAutoSaveStatus("Salvo ✓");
     }, 2000);
-
     return () => clearTimeout(handler);
   }, [
     title,
@@ -174,14 +224,30 @@ function HomePageContent() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [undoGrid, redoGrid]);
 
-  useEffect(() => {
-    if (!isQuizLoaded) {
-      const newGrid = Array(gridSize * gridSize).fill("");
-      setGridState(newGrid);
-      setHistoryState(newGrid, true);
+  const resetActiveToolIfNeeded = useCallback(
+    (removedAnswers: string[]) => {
+      if (activeTool && removedAnswers.includes(activeTool.answer))
+        setActiveTool(null);
+    },
+    [activeTool]
+  );
+  const checkForDuplicates = useCallback((qs: Question[]) => {
+    const answerCounts = new Map<string, number>();
+    qs.forEach((q) =>
+      q.options.forEach((opt) => {
+        if (opt.answer.trim())
+          answerCounts.set(opt.answer, (answerCounts.get(opt.answer) || 0) + 1);
+      })
+    );
+    const duplicates = new Set<string>();
+    for (const [answer, count] of answerCounts.entries()) {
+      if (count > 1) duplicates.add(answer);
     }
-  }, [gridSize, isQuizLoaded, setHistoryState]);
-
+    setDuplicateAnswers(duplicates);
+  }, []);
+  useEffect(() => {
+    checkForDuplicates(questions);
+  }, [questions, checkForDuplicates]);
   const clearAnswersFromGrid = useCallback(
     (answersToClear: string[]) => {
       if (answersToClear.length === 0) return;
@@ -195,7 +261,6 @@ function HomePageContent() {
     },
     [gridState, resetActiveToolIfNeeded, setHistoryState]
   );
-
   const paintCells = (index: number) => {
     if (!isOwner) return;
     setGridState((currentGrid) => {
@@ -208,23 +273,20 @@ function HomePageContent() {
           const targetCol = startCol + c;
           if (targetRow < gridSize && targetCol < gridSize) {
             const targetIndex = targetRow * gridSize + targetCol;
-            if (isEraserActive) {
-              newGridState[targetIndex] = "";
-            } else if (activeTool?.answer.trim()) {
+            if (isEraserActive) newGridState[targetIndex] = "";
+            else if (activeTool?.answer.trim())
               newGridState[targetIndex] = activeTool.answer;
-            }
           }
         }
       }
       return newGridState;
     });
   };
-
   const handleGridSizeChange = (newSize: number) => {
     if (!isQuizLoaded && isOwner) setGridSize(newSize);
   };
   const handleClearGrid = () => {
-    if (window.confirm("Tem certeza que deseja limpar a grade?")) {
+    if (window.confirm("Tem certeza?")) {
       const clearedGrid = Array(gridSize * gridSize).fill("");
       setGridState(clearedGrid);
       setHistoryState(clearedGrid);
@@ -244,48 +306,39 @@ function HomePageContent() {
       if (
         JSON.stringify(gridState) !==
         JSON.stringify(gridStateBeforePaint.current)
-      ) {
+      )
         setHistoryState(gridState);
-      }
     }
   };
-
   const onNewQuizSaved = (quizId: string) => {
     router.push(`/?quiz_id=${quizId}`);
   };
 
   if (isLoading) return <Spinner />;
 
-  // Cria o mapa de cores para a grade (lógica inalterada)
   const answerToColorMap = new Map<string, string>();
-  questions.forEach((question) => {
+  const answerToQuestionRefMap = new Map<string, string>();
+  questions.forEach((question, index) => {
+    const questionRef = `Q${index + 1}`;
     if (
       question.type === "single" &&
       question.color &&
       question.options[0]?.answer
     ) {
       answerToColorMap.set(question.options[0].answer, question.color.value);
+      answerToQuestionRefMap.set(
+        question.options[0].answer,
+        question.options[0].answer
+      );
     } else if (question.type === "multiple" && question.optionColors) {
       question.options.forEach((option) => {
         const color = question.optionColors?.[option.id];
         if (color && option.answer) {
           answerToColorMap.set(option.answer, color.value);
+          answerToQuestionRefMap.set(option.answer, questionRef);
         }
       });
     }
-  });
-
-  // NOVO: Cria um mapa de resposta -> referência da questão
-  const answerToQuestionRefMap = new Map<string, string>();
-  questions.forEach((question, index) => {
-    const questionRef = `Q${index + 1}`;
-    question.options.forEach((option) => {
-      // Para perguntas de múltipla escolha, o texto exibido será a referência.
-      // Para resposta única, mantemos o valor da própria resposta.
-      const displayText =
-        question.type === "multiple" ? questionRef : option.answer;
-      answerToQuestionRefMap.set(option.answer, displayText);
-    });
   });
 
   return (
@@ -341,7 +394,7 @@ function HomePageContent() {
             gridState={gridState}
             gridSize={gridSize}
             answerToColorMap={answerToColorMap}
-            answerToQuestionRefMap={answerToQuestionRefMap} // Passando o novo mapa
+            answerToQuestionRefMap={answerToQuestionRefMap}
             paintCells={paintCells}
             isPainting={isPainting}
           />
