@@ -5,10 +5,26 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import Spinner from "@/components/Spinner";
 import { generatePdf } from "@/lib/pdfGenerator";
-import type { ColorGroup } from "@/lib/types";
+import type { Question } from "@/lib/types";
+import type { SchoolColor } from "@/lib/colors";
 
 // Tipo auxiliar para lidar com a ambiguidade do Supabase
 type RelatedName = { name: string } | { full_name: string };
+
+type FetchedOption = {
+  id: number;
+  text: string;
+  answer: string;
+  color: string;
+};
+
+type FetchedQuestion = {
+  id: number;
+  text: string;
+  type: "single" | "multiple";
+  correct_option_id: number;
+  answer_options: FetchedOption[];
+};
 
 // Interface flexível que aceita objeto, array ou nulo
 interface PublicQuiz {
@@ -95,42 +111,64 @@ export default function CommunityPage() {
   const handleGeneratePdf = async (quizId: string, title: string) => {
     setGeneratingPdfId(quizId);
     try {
-      const { data: quizData } = await supabase
+      const { data: quizData, error: quizError } = await supabase
         .from("quizzes")
-        .select("grid_data, grid_size")
+        .select("grid_data, grid_size, questions(*, answer_options(*))")
         .eq("id", quizId)
         .single();
-      if (!quizData) throw new Error("Quiz não encontrado");
 
-      const { data: questionsData } = await supabase
-        .from("questions")
-        .select("color, question_text, answer")
-        .eq("quiz_id", quizId);
-      if (!questionsData) throw new Error("Perguntas não encontradas");
+      if (quizError || !quizData) {
+        throw new Error("Quiz não encontrado ou erro ao buscar dados.");
+      }
 
-      const colorGroups = new Map<string, ColorGroup>();
-      questionsData.forEach((q) => {
-        const colorObj = JSON.parse(q.color);
-        if (!colorGroups.has(colorObj.value)) {
-          colorGroups.set(colorObj.value, {
-            id: Math.random(),
-            color: colorObj,
-            questions: [],
-          });
+      const fetchedQuestions: FetchedQuestion[] = quizData.questions || [];
+      const questionsForPdf: Question[] = fetchedQuestions.map(
+        (q: FetchedQuestion) => {
+          const optionsData = q.answer_options || [];
+          const options = optionsData.map((opt: FetchedOption) => ({
+            id: opt.id,
+            text: opt.text,
+            answer: opt.answer,
+          }));
+
+          let color: SchoolColor | undefined;
+          let optionColors: Record<number, SchoolColor> | undefined;
+
+          if (q.type === "single") {
+            try {
+              color = optionsData[0]
+                ? JSON.parse(optionsData[0].color)
+                : undefined;
+            } catch {
+              color = undefined; // Garante que não quebre se o JSON for inválido
+            }
+          } else {
+            optionColors = {};
+            optionsData.forEach((opt: FetchedOption) => {
+              try {
+                optionColors![opt.id] = JSON.parse(opt.color);
+              } catch {
+                // Ignora cores com formato inválido em vez de quebrar a aplicação
+              }
+            });
+          }
+
+          return {
+            id: q.id,
+            text: q.text,
+            type: q.type,
+            options,
+            correctOptionId: q.correct_option_id,
+            color,
+            optionColors,
+          };
         }
-        colorGroups
-          .get(colorObj.value)!
-          .questions.push({
-            id: Math.random(),
-            text: q.question_text,
-            answer: q.answer,
-          });
-      });
+      );
 
       generatePdf(
         title,
-        Array.from(colorGroups.values()),
-        quizData.grid_data,
+        questionsForPdf,
+        quizData.grid_data || [],
         quizData.grid_size
       );
     } catch (error) {

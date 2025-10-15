@@ -94,11 +94,21 @@ function HomePageContent() {
         let optionColors: Record<number, SchoolColor> | undefined;
 
         if (q.type === "single") {
-          color = optionsData[0] ? JSON.parse(optionsData[0].color) : undefined;
+          try {
+            color = optionsData[0]
+              ? JSON.parse(optionsData[0].color)
+              : undefined;
+          } catch {
+            color = undefined;
+          }
         } else {
           optionColors = {};
           optionsData.forEach((opt) => {
-            optionColors![opt.id] = JSON.parse(opt.color);
+            try {
+              optionColors![opt.id] = JSON.parse(opt.color);
+            } catch {
+              // Ignora a cor se for inválida
+            }
           });
         }
         return {
