@@ -23,7 +23,8 @@ type FetchedQuestion = {
   text: string;
   type: "single" | "multiple";
   correct_option_id: number;
-  template_answer_options: FetchedOption[];
+  answer_options?: FetchedOption[];
+  template_answer_options?: FetchedOption[];
 };
 type SupabasePayload<T> = {
   title: string;
@@ -65,8 +66,10 @@ function HomePageContent() {
   const [categories, setCategories] = useState<TemplateCategory[]>([]);
   const [categoryId, setCategoryId] = useState<string | undefined>();
 
-  useEffect(() => {
-    const processAndSetData = (
+  const loadedIdRef = useRef<string | boolean | null>(null);
+
+  const processAndSetData = useCallback(
+    (
       dataTitle: string,
       dataGridSize: number,
       dataGridData: string[] | null,
@@ -81,7 +84,8 @@ function HomePageContent() {
       setHistoryState(loadedGridState, true);
 
       const newQuestions: Question[] = dataQuestions.map((q) => {
-        const options = q.template_answer_options.map((opt) => ({
+        const optionsData = q.answer_options || q.template_answer_options || [];
+        const options = optionsData.map((opt) => ({
           id: opt.id,
           text: opt.text,
           answer: opt.answer,
@@ -90,12 +94,10 @@ function HomePageContent() {
         let optionColors: Record<number, SchoolColor> | undefined;
 
         if (q.type === "single") {
-          color = q.template_answer_options[0]
-            ? JSON.parse(q.template_answer_options[0].color)
-            : undefined;
+          color = optionsData[0] ? JSON.parse(optionsData[0].color) : undefined;
         } else {
           optionColors = {};
-          q.template_answer_options.forEach((opt) => {
+          optionsData.forEach((opt) => {
             optionColors![opt.id] = JSON.parse(opt.color);
           });
         }
@@ -110,12 +112,22 @@ function HomePageContent() {
         };
       });
       setQuestions(newQuestions);
-    };
+    },
+    [setHistoryState]
+  );
 
+  useEffect(() => {
     const fetchInitialData = async () => {
-      setIsLoading(true);
       const quizId = searchParams.get("quiz_id");
       const templateId = searchParams.get("template_id");
+      const currentId = quizId || templateId;
+
+      if (loadedIdRef.current === currentId && currentId !== null) {
+        return;
+      }
+
+      setIsLoading(true);
+      loadedIdRef.current = currentId;
 
       const { data: categoriesData } = await supabase
         .from("template_categories")
@@ -147,6 +159,7 @@ function HomePageContent() {
         const { data: templateData, error } = await supabase
           .from("templates")
           .select("*, template_questions(*, template_answer_options(*))")
+          .eq("id", templateId)
           .single<SupabasePayload<FetchedQuestion>>();
         if (error || !templateData) {
           router.push("/");
@@ -184,14 +197,22 @@ function HomePageContent() {
 
     fetchInitialData();
   }, [
-    supabase,
-    searchParams,
     user,
+    searchParams,
+    supabase,
     router,
+    processAndSetData,
     gridSize,
     setHistoryState,
     questions.length,
-  ]); // CORREÇÃO: Adicionada a dependência 'questions.length'
+  ]);
+
+  const handleGridSizeChange = (newSize: number) => {
+    if (!isQuizLoaded && isOwner) {
+      setGridSize(newSize);
+      setHistoryState(Array(newSize * newSize).fill(""), true);
+    }
+  };
 
   useEffect(() => {
     if (!currentQuizId || !isOwner) return;
@@ -287,9 +308,6 @@ function HomePageContent() {
       }
       return newGridState;
     });
-  };
-  const handleGridSizeChange = (newSize: number) => {
-    if (!isQuizLoaded && isOwner) setGridSize(newSize);
   };
   const handleClearGrid = () => {
     if (window.confirm("Tem certeza?")) {

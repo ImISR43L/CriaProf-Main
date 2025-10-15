@@ -92,7 +92,7 @@ const QuestionBlock = ({
   const handleTypeChange = (newType: QuestionType) => {
     if (newType === "single") {
       const firstOption = question.options[0] || {
-        id: Date.now(),
+        id: 1,
         text: "",
         answer: "",
       };
@@ -110,26 +110,26 @@ const QuestionBlock = ({
       });
     } else {
       // 'multiple'
+      // CORREÇÃO: Usar o índice como um ID estável e previsível
       const newOptions = Array.from({ length: 4 }, (_, i) => ({
-        id: Date.now() + i,
+        id: i, // ID agora é 0, 1, 2, 3
         text: question.options[i]?.text || "",
         answer: String.fromCharCode(97 + i),
       }));
 
       const newOptionColors: { [id: number]: SchoolColor } = {};
-      let colorIndex = 0;
+      const locallyUsed = new Set(usedColorValues);
+
       newOptions.forEach((opt) => {
-        while (
-          schoolColorPalette[colorIndex] &&
-          usedColorValues.has(schoolColorPalette[colorIndex].value)
-        ) {
-          colorIndex++;
-        }
-        if (schoolColorPalette[colorIndex]) {
-          newOptionColors[opt.id] = schoolColorPalette[colorIndex];
-          colorIndex++;
+        const nextColor = schoolColorPalette.find(
+          (c) => !locallyUsed.has(c.value)
+        );
+        if (nextColor) {
+          newOptionColors[opt.id] = nextColor;
+          locallyUsed.add(nextColor.value);
         } else {
-          newOptionColors[opt.id] = schoolColorPalette[0];
+          newOptionColors[opt.id] =
+            schoolColorPalette[opt.id % schoolColorPalette.length];
         }
       });
 
@@ -137,7 +137,7 @@ const QuestionBlock = ({
         ...question,
         type: "multiple",
         options: newOptions,
-        correctOptionId: newOptions[0].id,
+        correctOptionId: newOptions[0].id, // Padrão para a primeira opção (ID 0)
         color: undefined,
         optionColors: newOptionColors,
       });

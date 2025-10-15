@@ -9,7 +9,7 @@ import { useSupabase } from "@/components/AuthProvider";
 interface ActionsPanelProps {
   onClearGrid: () => void;
   activityTitle: string;
-  questions: Question[]; // Alterado de colorGroups para questions
+  questions: Question[];
   gridState: string[];
   gridSize: number;
   quizId: string | null;
@@ -21,7 +21,7 @@ interface ActionsPanelProps {
 const ActionsPanel = ({
   onClearGrid,
   activityTitle,
-  questions, // Usa a nova prop
+  questions,
   gridState,
   gridSize,
   quizId,
@@ -38,8 +38,6 @@ const ActionsPanel = ({
       alert("Por favor, adicione um título à atividade antes de gerar o PDF.");
       return;
     }
-    // A função generatePdf também precisará ser refatorada,
-    // mas por agora, a chamada é atualizada.
     generatePdf(activityTitle, questions, gridState, gridSize);
   };
 
@@ -53,35 +51,93 @@ const ActionsPanel = ({
       return;
     }
     if (!categoryId) {
-      alert(
-        "Por favor, selecione uma categoria antes de salvar o questionário."
-      );
+      alert("Por favor, selecione uma categoria antes de salvar.");
       return;
     }
 
     setIsSaving(true);
     setMessage("");
 
-    // A lógica para salvar as perguntas precisará ser migrada no backend
-    // para a nova estrutura de tabelas (questions e answer_options).
-    // O código abaixo é uma representação conceitual de como os dados seriam preparados.
+    let currentQuizId = quizId;
 
-    console.log("Dados a serem salvos:", {
-      title: activityTitle,
-      grid_data: gridState,
-      grid_size: gridSize,
-      category_id: categoryId,
-      questions: questions,
-    });
+    // 1. Salva ou atualiza o quiz principal
+    if (currentQuizId && isOwner) {
+      const { error: quizError } = await supabase
+        .from("quizzes")
+        .update({
+          title: activityTitle,
+          grid_data: gridState,
+          category_id: categoryId,
+        })
+        .eq("id", currentQuizId);
+      if (quizError) {
+        setMessage(`Erro ao atualizar quiz: ${quizError.message}`);
+        setIsSaving(false);
+        return;
+      }
+    } else {
+      const { data: quizData, error: quizError } = await supabase
+        .from("quizzes")
+        .insert({
+          title: activityTitle,
+          grid_data: gridState,
+          grid_size: gridSize,
+          user_id: user.id,
+          category_id: categoryId,
+        })
+        .select()
+        .single();
+      if (quizError || !quizData) {
+        setMessage(`Erro ao criar quiz: ${quizError?.message}`);
+        setIsSaving(false);
+        return;
+      }
+      currentQuizId = quizData.id;
+    }
 
-    // Lógica de salvar (precisará de adaptação no futuro quando o DB for migrado)
-    setMessage(
-      "Funcionalidade de salvar em desenvolvimento para a nova estrutura."
-    );
-    setTimeout(() => {
-      setIsSaving(false);
-      setMessage("");
-    }, 3000);
+    // 2. Apaga as perguntas e opções antigas para sincronizar
+    await supabase.from("questions").delete().eq("quiz_id", currentQuizId);
+
+    // 3. Insere as novas perguntas e opções
+    for (const question of questions) {
+      const { data: questionData, error: questionError } = await supabase
+        .from("questions")
+        .insert({
+          quiz_id: currentQuizId,
+          text: question.text,
+          type: question.type,
+          correct_option_id: question.correctOptionId,
+        })
+        .select()
+        .single();
+
+      if (questionError || !questionData) {
+        setMessage(`Erro ao salvar pergunta: ${questionError?.message}`);
+        continue; // Pula para a próxima pergunta
+      }
+
+      const optionsToInsert = question.options.map((opt) => ({
+        question_id: questionData.id,
+        text: opt.text,
+        answer: opt.answer,
+        color: JSON.stringify(
+          question.type === "single"
+            ? question.color
+            : question.optionColors?.[opt.id]
+        ),
+      }));
+
+      if (optionsToInsert.length > 0) {
+        await supabase.from("answer_options").insert(optionsToInsert);
+      }
+    }
+
+    setMessage("Questionário salvo com sucesso!");
+    setIsSaving(false);
+    if (!quizId && currentQuizId) {
+      onNewQuizSaved(currentQuizId);
+    }
+    setTimeout(() => setMessage(""), 3000);
   };
 
   return (
@@ -94,7 +150,6 @@ const ActionsPanel = ({
         >
           Gerar PDF
         </button>
-
         {user && isOwner && (
           <>
             <button
@@ -116,7 +171,6 @@ const ActionsPanel = ({
             </button>
           </>
         )}
-
         {message && (
           <p className="text-sm text-center text-green-600 mt-2">{message}</p>
         )}

@@ -13,10 +13,26 @@ import GridSizeSelector from "@/components/GridSizeSelector";
 import { useHistory } from "@/hooks/useHistory";
 import { schoolColorPalette, SchoolColor } from "@/lib/colors";
 
-type FetchedOldQuestion = {
-  color: string;
-  question_text: string;
+type FetchedOption = {
+  id: number;
+  text: string;
   answer: string;
+  color: string;
+};
+type FetchedQuestion = {
+  id: number;
+  text: string;
+  type: "single" | "multiple";
+  correct_option_id: number;
+  template_answer_options: FetchedOption[];
+};
+type SupabasePayload = {
+  title: string;
+  description: string | null;
+  grid_size: number;
+  grid_data: string[] | null;
+  category_id?: string;
+  template_questions: FetchedQuestion[];
 };
 
 export default function TemplateEditorPage() {
@@ -46,6 +62,12 @@ export default function TemplateEditorPage() {
   >([]);
   const [gridState, setGridState] = useState<string[]>(historyState);
   const gridStateBeforePaint = useRef<string[]>([]);
+  const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState<"success" | "error">(
+    "success"
+  );
+
+  const hasLoaded = useRef(false);
 
   useEffect(() => {
     setGridState(historyState);
@@ -57,7 +79,11 @@ export default function TemplateEditorPage() {
   }, [profile, router]);
 
   useEffect(() => {
+    if (hasLoaded.current) return;
+
     const fetchInitialData = async () => {
+      hasLoaded.current = true;
+      setLoading(true);
       const { data: categoriesData } = await supabase
         .from("template_categories")
         .select("id, name")
@@ -65,34 +91,27 @@ export default function TemplateEditorPage() {
       if (categoriesData) setCategories(categoriesData);
 
       if (isNewTemplate) {
-        if (questions.length === 0) {
-          setHistoryState(Array(gridSize * gridSize).fill(""), true);
-          setQuestions([
-            {
-              id: Date.now(),
-              text: "",
-              type: "single",
-              options: [{ id: Date.now() + 1, text: "", answer: "" }],
-              correctOptionId: Date.now() + 1,
-              color: schoolColorPalette[0],
-            },
-          ]);
-        }
-        setLoading(false);
+        setQuestions([
+          {
+            id: Date.now(),
+            text: "",
+            type: "single",
+            options: [{ id: Date.now() + 1, text: "", answer: "" }],
+            correctOptionId: Date.now() + 1,
+            color: schoolColorPalette[0],
+          },
+        ]);
+        setHistoryState(Array(gridSize * gridSize).fill(""), true);
       } else {
-        const { data: templateData } = await supabase
+        const { data: templateData, error } = await supabase
           .from("templates")
-          .select("*")
+          .select("*, template_questions(*, template_answer_options(*))")
           .eq("id", templateId)
-          .single();
-        if (!templateData) {
+          .single<SupabasePayload>();
+        if (error || !templateData) {
           router.push("/admin/templates");
           return;
         }
-        const { data: questionsData } = await supabase
-          .from("template_questions")
-          .select("*")
-          .eq("template_id", templateId);
 
         setTitle(templateData.title);
         setDescription(templateData.description || "");
@@ -104,60 +123,151 @@ export default function TemplateEditorPage() {
           true
         );
 
-        const newQuestions: Question[] = [];
-        const colorMap = new Map<
-          string,
-          { color: SchoolColor; items: FetchedOldQuestion[] }
-        >();
-        ((questionsData as FetchedOldQuestion[]) || []).forEach((q) => {
-          const colorObj = JSON.parse(q.color) as SchoolColor;
-          if (!colorMap.has(colorObj.value))
-            colorMap.set(colorObj.value, { color: colorObj, items: [] });
-          colorMap.get(colorObj.value)!.items.push(q);
-        });
-        Array.from(colorMap.values()).forEach((group) => {
-          group.items.forEach((item, index) => {
-            newQuestions.push({
-              id: Date.now() + index,
-              text: item.question_text,
-              type: "single",
-              options: [
-                { id: Date.now() + index + 1, text: "", answer: item.answer },
-              ],
-              correctOptionId: Date.now() + index + 1,
-              color: group.color,
-            });
-          });
-        });
+        const newQuestions: Question[] = templateData.template_questions.map(
+          (q) => {
+            const options = q.template_answer_options.map((opt) => ({
+              id: opt.id,
+              text: opt.text,
+              answer: opt.answer,
+            }));
+            let color: SchoolColor | undefined;
+            let optionColors: Record<number, SchoolColor> | undefined;
+
+            if (q.type === "single") {
+              color = q.template_answer_options[0]
+                ? JSON.parse(q.template_answer_options[0].color)
+                : undefined;
+            } else {
+              optionColors = {};
+              q.template_answer_options.forEach((opt) => {
+                optionColors![opt.id] = JSON.parse(opt.color);
+              });
+            }
+            return {
+              id: q.id,
+              text: q.text,
+              type: q.type,
+              options,
+              correctOptionId: q.correct_option_id,
+              color,
+              optionColors,
+            };
+          }
+        );
         setQuestions(newQuestions);
-        setLoading(false);
       }
+      setLoading(false);
     };
     if (profile?.role === "admin") {
       fetchInitialData();
     }
   }, [
     profile,
-    templateId,
     isNewTemplate,
+    templateId,
     supabase,
     router,
     setHistoryState,
     gridSize,
-    questions.length,
   ]);
 
+  const handleGridSizeChange = (newSize: number) => {
+    if (isNewTemplate) {
+      setGridSize(newSize);
+      setHistoryState(Array(newSize * newSize).fill(""), true);
+    }
+  };
+
   const handleSaveTemplate = async () => {
-    if (!categoryId) {
-      alert("Por favor, selecione uma categoria para o template.");
+    if (!title.trim() || !categoryId) {
+      setMessage("Por favor, preencha o título e a categoria.");
+      setMessageType("error");
       return;
     }
     setSaving(true);
-    alert(
-      "Funcionalidade de salvar template em desenvolvimento para a nova estrutura."
-    );
+    setMessage("");
+
+    let currentTemplateId = isNewTemplate ? null : templateId;
+
+    if (isNewTemplate) {
+      const { data: newTemplate, error } = await supabase
+        .from("templates")
+        .insert({
+          title,
+          description,
+          category_id: categoryId,
+          grid_size: gridSize,
+          grid_data: gridState,
+        })
+        .select()
+        .single();
+      if (error || !newTemplate) {
+        setMessage(`Erro ao criar template: ${error?.message}`);
+        setMessageType("error");
+        setSaving(false);
+        return;
+      }
+      currentTemplateId = newTemplate.id;
+    } else {
+      const { error } = await supabase
+        .from("templates")
+        .update({
+          title,
+          description,
+          category_id: categoryId,
+          grid_data: gridState,
+        })
+        .eq("id", currentTemplateId!);
+      if (error) {
+        setMessage(`Erro ao atualizar template: ${error.message}`);
+        setMessageType("error");
+        setSaving(false);
+        return;
+      }
+      await supabase
+        .from("template_questions")
+        .delete()
+        .eq("template_id", currentTemplateId!);
+    }
+
+    for (const question of questions) {
+      const { data: questionData, error: questionError } = await supabase
+        .from("template_questions")
+        .insert({
+          template_id: currentTemplateId,
+          text: question.text,
+          type: question.type,
+          correct_option_id: question.correctOptionId,
+        })
+        .select()
+        .single();
+      if (questionError || !questionData) {
+        setMessage(`Erro ao salvar pergunta: ${questionError?.message}`);
+        setMessageType("error");
+        continue;
+      }
+      const optionsToInsert = question.options.map((opt) => ({
+        question_id: questionData.id,
+        text: opt.text,
+        answer: opt.answer,
+        color: JSON.stringify(
+          question.type === "single"
+            ? question.color
+            : question.optionColors?.[opt.id]
+        ),
+      }));
+      if (optionsToInsert.length > 0) {
+        await supabase.from("template_answer_options").insert(optionsToInsert);
+      }
+    }
+
+    setMessage("Template salvo com sucesso!");
+    setMessageType("success");
     setSaving(false);
-    router.push("/admin/templates");
+    setTimeout(() => {
+      router.push("/admin/templates");
+      router.refresh();
+    }, 2000);
   };
 
   const checkForDuplicates = useCallback((qs: Question[]) => {
@@ -174,11 +284,9 @@ export default function TemplateEditorPage() {
     }
     setDuplicateAnswers(duplicates);
   }, []);
-
   useEffect(() => {
     checkForDuplicates(questions);
   }, [questions, checkForDuplicates]);
-
   const clearAnswersFromGrid = useCallback(
     (answersToClear: string[]) => {
       if (answersToClear.length === 0) return;
@@ -193,7 +301,6 @@ export default function TemplateEditorPage() {
     },
     [activeTool, gridState, setHistoryState]
   );
-
   const paintCells = (index: number) => {
     setGridState((currentGrid) => {
       const newGridState = [...currentGrid];
@@ -214,7 +321,6 @@ export default function TemplateEditorPage() {
       return newGridState;
     });
   };
-
   const handleSetTool = (tool: ActiveTool | null) => {
     setActiveTool(tool);
     setIsEraserActive(false);
@@ -353,7 +459,7 @@ export default function TemplateEditorPage() {
           <div className="bg-white p-5 rounded-lg shadow-md h-fit border border-gray-200">
             <GridSizeSelector
               selectedSize={gridSize}
-              onChange={(s) => setGridSize(s)}
+              onChange={handleGridSizeChange}
               disabled={!isNewTemplate}
             />
             {!isNewTemplate && (
@@ -388,6 +494,17 @@ export default function TemplateEditorPage() {
               >
                 Cancelar
               </button>
+              {message && (
+                <p
+                  className={`text-sm text-center font-semibold ${
+                    messageType === "success"
+                      ? "text-green-600"
+                      : "text-red-600"
+                  }`}
+                >
+                  {message}
+                </p>
+              )}
             </div>
           </aside>
         </div>

@@ -1,3 +1,4 @@
+// src/components/ControlPanel.tsx
 import React from "react";
 import QuestionBlock from "./QuestionBlock";
 import { schoolColorPalette, SchoolColor } from "@/lib/colors";
@@ -46,7 +47,13 @@ const ControlPanel = ({
   });
 
   const handleAddQuestion = () => {
-    if (!isOwner) return;
+    // CORREÇÃO: Adiciona um alerta se o utilizador não for o dono
+    if (!isOwner) {
+      alert(
+        "Você não tem permissão para adicionar perguntas a esta atividade."
+      );
+      return;
+    }
     const nextColor =
       schoolColorPalette.find(
         (c: SchoolColor) => !usedColorValues.has(c.value)
@@ -151,6 +158,7 @@ const ControlPanel = ({
       {isOwner && (
         <button
           onClick={handleAddQuestion}
+          type="button" // CORREÇÃO: Garante que o botão não submeta um formulário
           className="w-full mt-4 p-2 border-2 border-dashed border-gray-400 rounded-md text-gray-600 font-semibold hover:bg-gray-100 hover:border-gray-500 transition-colors"
         >
           + Adicionar Pergunta
