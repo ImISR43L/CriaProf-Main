@@ -16,7 +16,7 @@ interface Template {
   title: string;
   description: string;
   grid_size: number;
-  template_categories: { name: string }[] | null;
+  template_categories: { name: string } | { name: string }[] | null;
 }
 
 export default function TemplatesPage() {
@@ -27,6 +27,13 @@ export default function TemplatesPage() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("all");
 
   const supabase = createClient();
+  const getCategoryName = (
+    cat: { name: string } | { name: string }[] | null
+  ): string | undefined => {
+    if (!cat) return undefined;
+    const item = Array.isArray(cat) ? cat[0] : cat;
+    return item?.name;
+  };
 
   useEffect(() => {
     const fetchFiltersAndTemplates = async () => {
@@ -125,7 +132,8 @@ export default function TemplatesPage() {
               className="bg-white border border-gray-200 rounded-lg shadow-md p-6 flex flex-col transition-transform hover:scale-105"
             >
               <span className="text-xs font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded-full self-start mb-2">
-                {template.template_categories?.[0]?.name || "Sem Categoria"}
+                {getCategoryName(template.template_categories) ||
+                  "Sem Categoria"}
               </span>
               <h2 className="font-bold text-xl text-gray-900 mb-2">
                 {template.title}

@@ -45,7 +45,9 @@ const BrushPanel = ({
                   color: getContrastColor(activeTool.color.value),
                 }}
               >
-                {activeTool.answer}
+                {activeTool.answer.includes("-")
+                  ? activeTool.answer.split("-")[1]
+                  : activeTool.answer}
               </span>
             ) : (
               <span className="text-sm text-gray-500">

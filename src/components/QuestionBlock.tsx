@@ -112,9 +112,10 @@ const QuestionBlock = ({
       // 'multiple'
       // CORREÇÃO: Usar o índice como um ID estável e previsível
       const newOptions = Array.from({ length: 4 }, (_, i) => ({
-        id: i, // ID agora é 0, 1, 2, 3
+        id: Date.now() + i, // ID único para a chave de renderização
         text: question.options[i]?.text || "",
-        answer: String.fromCharCode(97 + i),
+        // O valor da resposta agora é único, combinando o ID da pergunta e a letra da opção
+        answer: `${question.id}-${String.fromCharCode(97 + i)}`,
       }));
 
       const newOptionColors: { [id: number]: SchoolColor } = {};
@@ -155,6 +156,15 @@ const QuestionBlock = ({
     onChange({ ...question, options: updatedOptions });
   };
 
+  const colorsUsedInThisQuestion = new Set<string>();
+  if (question.type === "multiple" && question.optionColors) {
+    Object.values(question.optionColors).forEach((color) => {
+      if (color) {
+        colorsUsedInThisQuestion.add(color.value);
+      }
+    });
+  }
+
   return (
     <div className="border border-gray-200 rounded-lg p-4 mb-4 relative bg-gray-50/50">
       <div className="flex items-center justify-between pb-3 mb-3 border-b">
@@ -189,7 +199,7 @@ const QuestionBlock = ({
             <ColorPicker
               selectedColor={question.color!}
               disabled={disabled}
-              usedColorValues={usedColorValues}
+              usedColorValues={new Set()}
               onColorChange={(color) => onChange({ ...question, color })}
             />
             <textarea
@@ -255,6 +265,10 @@ const QuestionBlock = ({
               const isActive =
                 activeTool?.answer === opt.answer &&
                 activeTool?.color.value === color?.value;
+              // Extrai a letra do valor da resposta para exibição
+              const displayLetter = opt.answer.includes("-")
+                ? opt.answer.split("-")[1]
+                : opt.answer;
               return (
                 <div
                   key={opt.id}
@@ -269,11 +283,11 @@ const QuestionBlock = ({
                       onChange({ ...question, correctOptionId: opt.id })
                     }
                   />
-                  <span className="font-mono font-bold">{opt.answer}.</span>
+                  <span className="font-mono font-bold">{displayLetter}.</span>
                   <ColorPicker
                     selectedColor={color!}
                     disabled={disabled}
-                    usedColorValues={usedColorValues}
+                    usedColorValues={colorsUsedInThisQuestion}
                     onColorChange={(newColor) =>
                       onChange({
                         ...question,
@@ -286,7 +300,7 @@ const QuestionBlock = ({
                   />
                   <input
                     type="text"
-                    placeholder={`Texto da Opção ${opt.answer.toUpperCase()}`}
+                    placeholder={`Texto da Opção ${displayLetter.toUpperCase()}`}
                     value={opt.text}
                     onChange={(e) =>
                       handleTextChange("text", e.target.value, opt.id)
