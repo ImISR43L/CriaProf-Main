@@ -12,7 +12,6 @@ import type { Question, ActiveTool, TemplateCategory } from "@/lib/types";
 import { useHistory } from "@/hooks/useHistory";
 import { schoolColorPalette, SchoolColor } from "@/lib/colors";
 
-// Tipos para dados do Supabase
 type FetchedOption = {
   id: number;
   text: string;
@@ -67,7 +66,6 @@ function HomePageContent() {
   const [categoryId, setCategoryId] = useState<string | undefined>();
 
   useEffect(() => {
-    // A função agora é definida DENTRO do useEffect
     const processAndSetData = (
       dataTitle: string,
       dataGridSize: number,
@@ -149,7 +147,6 @@ function HomePageContent() {
         const { data: templateData, error } = await supabase
           .from("templates")
           .select("*, template_questions(*, template_answer_options(*))")
-          .eq("id", templateId)
           .single<SupabasePayload<FetchedQuestion>>();
         if (error || !templateData) {
           router.push("/");
@@ -167,25 +164,34 @@ function HomePageContent() {
         setIsQuizLoaded(false);
         setCurrentQuizId(null);
       } else {
-        setIsOwner(true);
-        setQuestions([
-          {
-            id: Date.now(),
-            text: "",
-            type: "single",
-            options: [{ id: Date.now() + 1, text: "", answer: "" }],
-            correctOptionId: Date.now() + 1,
-            color: schoolColorPalette[0],
-          },
-        ]);
-        setHistoryState(Array(gridSize * gridSize).fill(""), true);
+        if (questions.length === 0) {
+          setIsOwner(true);
+          setQuestions([
+            {
+              id: Date.now(),
+              text: "",
+              type: "single",
+              options: [{ id: Date.now() + 1, text: "", answer: "" }],
+              correctOptionId: Date.now() + 1,
+              color: schoolColorPalette[0],
+            },
+          ]);
+          setHistoryState(Array(gridSize * gridSize).fill(""), true);
+        }
       }
       setIsLoading(false);
     };
 
     fetchInitialData();
-    // O array de dependências agora inclui as funções 'set' que a função interna 'processAndSetData' utiliza.
-  }, [supabase, searchParams, user, router, gridSize, setHistoryState]);
+  }, [
+    supabase,
+    searchParams,
+    user,
+    router,
+    gridSize,
+    setHistoryState,
+    questions.length,
+  ]); // CORREÇÃO: Adicionada a dependência 'questions.length'
 
   useEffect(() => {
     if (!currentQuizId || !isOwner) return;

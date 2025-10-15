@@ -65,17 +65,19 @@ export default function TemplateEditorPage() {
       if (categoriesData) setCategories(categoriesData);
 
       if (isNewTemplate) {
-        setHistoryState(Array(gridSize * gridSize).fill(""), true);
-        setQuestions([
-          {
-            id: Date.now(),
-            text: "",
-            type: "single",
-            options: [{ id: Date.now() + 1, text: "", answer: "" }],
-            correctOptionId: Date.now() + 1,
-            color: schoolColorPalette[0],
-          },
-        ]);
+        if (questions.length === 0) {
+          setHistoryState(Array(gridSize * gridSize).fill(""), true);
+          setQuestions([
+            {
+              id: Date.now(),
+              text: "",
+              type: "single",
+              options: [{ id: Date.now() + 1, text: "", answer: "" }],
+              correctOptionId: Date.now() + 1,
+              color: schoolColorPalette[0],
+            },
+          ]);
+        }
         setLoading(false);
       } else {
         const { data: templateData } = await supabase
@@ -142,6 +144,7 @@ export default function TemplateEditorPage() {
     router,
     setHistoryState,
     gridSize,
+    questions.length,
   ]);
 
   const handleSaveTemplate = async () => {
