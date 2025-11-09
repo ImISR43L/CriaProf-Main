@@ -91,7 +91,7 @@ export default function AdminContentPage() {
               value={content_value}
               onChange={(e) => handleContentChange(page_key, e.target.value)}
               rows={page_key === "about_motivation" ? 8 : 1}
-              className="w-full p-2 border border-gray-300 rounded-md bg-white text-gray-900 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full p-2 border border-gray-300 rounded-md bg-white text-gray-900 focus:ring-yellow-500 focus:border-yellow-500"
             />
           </div>
         ))}
@@ -99,7 +99,7 @@ export default function AdminContentPage() {
           <button
             onClick={handleSave}
             disabled={saving}
-            className="py-2 px-6 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 transition-colors disabled:bg-blue-400"
+            className="py-2 px-6 bg-yellow-600 text-white font-semibold rounded-md hover:bg-yellow-700 transition-colors disabled:bg-yellow-400"
           >
             {saving ? "A salvar..." : "Salvar Alterações"}
           </button>

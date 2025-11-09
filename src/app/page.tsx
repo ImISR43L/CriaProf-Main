@@ -1,143 +1,45 @@
 // src/app/page.tsx
 "use client";
-import { useState, useEffect, Suspense, useCallback, useRef } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-import ControlPanel from "@/components/ControlPanel";
-import InteractiveGrid from "@/components/InteractiveGrid";
-import ToolPanel from "@/components/ToolPanel";
-import GridSizeSelector from "@/components/GridSizeSelector";
-import { useSupabase } from "@/components/AuthProvider";
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import Image from "next/image"; // 1. Importar o componente Image
+import { createClient } from "@/lib/supabase/client";
 import Spinner from "@/components/Spinner";
-import type { Question, ActiveTool, TemplateCategory } from "@/lib/types";
-import { useHistory } from "@/hooks/useHistory";
-import { schoolColorPalette, SchoolColor } from "@/lib/colors";
 
-type FetchedOption = {
-  id: number;
-  text: string;
-  answer: string;
-  color: string;
-};
-type FetchedQuestion = {
-  id: number;
-  text: string;
-  type: "single" | "multiple";
-  correct_option_id: number;
-  answer_options?: FetchedOption[];
-  template_answer_options?: FetchedOption[];
-};
-type SupabasePayload<T> = {
+interface TemplateCategory {
+  id: string;
+  name: string;
+}
+
+// CORREÇÃO FINAL: A interface agora espera que template_categories seja um array de objetos ou nulo.
+interface Template {
+  id: string;
   title: string;
+  description: string;
   grid_size: number;
-  grid_data: string[] | null;
-  category_id?: string;
-  user_id?: string;
-  questions: T[];
-  template_questions: T[];
-};
+  template_categories: { name: string } | { name: string }[] | null;
+}
 
-function HomePageContent() {
-  const { supabase, user } = useSupabase();
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const [title, setTitle] = useState("Atividade Sem Título");
-  const [questions, setQuestions] = useState<Question[]>([]);
-  const [gridSize, setGridSize] = useState(15);
-  const {
-    state: historyState,
-    setState: setHistoryState,
-    undo: undoGrid,
-    redo: redoGrid,
-  } = useHistory<string[]>([]);
-  const [gridState, setGridState] = useState<string[]>(historyState);
-  const gridStateBeforePaint = useRef<string[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isQuizLoaded, setIsQuizLoaded] = useState(false);
-  const [currentQuizId, setCurrentQuizId] = useState<string | null>(null);
-  const [isOwner, setIsOwner] = useState(false);
-  const [duplicateAnswers, setDuplicateAnswers] = useState<Set<string>>(
-    new Set()
-  );
-  const [activeTool, setActiveTool] = useState<ActiveTool | null>(null);
-  const [isEraserActive, setIsEraserActive] = useState(false);
-  const [brushSize, setBrushSize] = useState(1);
-  const [isPainting, setIsPainting] = useState(false);
-  const [autoSaveStatus, setAutoSaveStatus] = useState<string>("Salvo");
+export default function HomePage() {
+  // Renomeado de TemplatesPage
+  const [templates, setTemplates] = useState<Template[]>([]);
   const [categories, setCategories] = useState<TemplateCategory[]>([]);
-  const [categoryId, setCategoryId] = useState<string | undefined>();
+  const [loading, setLoading] = useState(true);
+  const [selectedGridSize, setSelectedGridSize] = useState<string>("all");
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("all");
 
-  const loadedIdRef = useRef<string | boolean | null>(null);
-
-  const processAndSetData = useCallback(
-    (
-      dataTitle: string,
-      dataGridSize: number,
-      dataGridData: string[] | null,
-      dataQuestions: FetchedQuestion[],
-      dataCategoryId?: string
-    ) => {
-      setTitle(dataTitle);
-      setGridSize(dataGridSize);
-      setCategoryId(dataCategoryId);
-      const loadedGridState =
-        dataGridData || Array(dataGridSize * dataGridSize).fill("");
-      setHistoryState(loadedGridState, true);
-
-      const newQuestions: Question[] = dataQuestions.map((q) => {
-        const optionsData = q.answer_options || q.template_answer_options || [];
-        const options = optionsData.map((opt) => ({
-          id: opt.id,
-          text: opt.text,
-          answer: opt.answer,
-        }));
-        let color: SchoolColor | undefined;
-        let optionColors: Record<number, SchoolColor> | undefined;
-
-        if (q.type === "single") {
-          try {
-            color = optionsData[0]
-              ? JSON.parse(optionsData[0].color)
-              : undefined;
-          } catch {
-            color = undefined;
-          }
-        } else {
-          optionColors = {};
-          optionsData.forEach((opt) => {
-            try {
-              optionColors![opt.id] = JSON.parse(opt.color);
-            } catch {
-              // Ignora a cor se for inválida
-            }
-          });
-        }
-        return {
-          id: q.id,
-          text: q.text,
-          type: q.type,
-          options,
-          correctOptionId: q.correct_option_id,
-          color,
-          optionColors,
-        };
-      });
-      setQuestions(newQuestions);
-    },
-    [setHistoryState]
-  );
+  const supabase = createClient();
+  const getCategoryName = (
+    cat: { name: string } | { name: string }[] | null
+  ): string | undefined => {
+    if (!cat) return undefined;
+    const item = Array.isArray(cat) ? cat[0] : cat;
+    return item?.name;
+  };
 
   useEffect(() => {
-    const fetchInitialData = async () => {
-      const quizId = searchParams.get("quiz_id");
-      const templateId = searchParams.get("template_id");
-      const currentId = quizId || templateId;
-
-      if (loadedIdRef.current === currentId && currentId !== null) {
-        return;
-      }
-
-      setIsLoading(true);
-      loadedIdRef.current = currentId;
+    const fetchFiltersAndTemplates = async () => {
+      setLoading(true);
 
       const { data: categoriesData } = await supabase
         .from("template_categories")
@@ -145,319 +47,136 @@ function HomePageContent() {
         .order("order_index");
       if (categoriesData) setCategories(categoriesData);
 
-      if (quizId) {
-        setCurrentQuizId(quizId);
-        const { data: quizData } = await supabase
-          .from("quizzes")
-          .select(`*, questions(*, answer_options(*))`)
-          .eq("id", quizId)
-          .single<SupabasePayload<FetchedQuestion>>();
-        if (quizData) {
-          setIsOwner(user?.id === quizData.user_id);
-          processAndSetData(
-            quizData.title,
-            quizData.grid_size,
-            quizData.grid_data,
-            quizData.questions,
-            quizData.category_id
-          );
-          setIsQuizLoaded(true);
-        } else {
-          router.push("/");
-        }
-      } else if (templateId) {
-        const { data: templateData, error } = await supabase
-          .from("templates")
-          .select("*, template_questions(*, template_answer_options(*))")
-          .eq("id", templateId)
-          .single<SupabasePayload<FetchedQuestion>>();
-        if (error || !templateData) {
-          router.push("/");
-          return;
-        }
+      let query = supabase
+        .from("templates")
+        .select("id, title, description, grid_size, template_categories(name)")
+        .order("created_at", { ascending: false });
 
-        processAndSetData(
-          templateData.title,
-          templateData.grid_size,
-          templateData.grid_data,
-          templateData.template_questions,
-          templateData.category_id
-        );
-        setIsOwner(true);
-        setIsQuizLoaded(false);
-        setCurrentQuizId(null);
-      } else {
-        if (questions.length === 0) {
-          setIsOwner(true);
-          setQuestions([
-            {
-              id: Date.now(),
-              text: "",
-              type: "single",
-              options: [{ id: Date.now() + 1, text: "", answer: "" }],
-              correctOptionId: Date.now() + 1,
-              color: schoolColorPalette[0],
-            },
-          ]);
-          setHistoryState(Array(gridSize * gridSize).fill(""), true);
-        }
+      if (selectedGridSize !== "all") {
+        query = query.eq("grid_size", parseInt(selectedGridSize));
       }
-      setIsLoading(false);
+
+      if (selectedCategoryId !== "all") {
+        query = query.eq("category_id", selectedCategoryId);
+      }
+
+      const { data, error } = await query;
+      if (data) setTemplates(data as Template[]);
+      if (error) console.error("Erro ao buscar templates:", error);
+
+      setLoading(false);
     };
+    fetchFiltersAndTemplates();
+  }, [supabase, selectedGridSize, selectedCategoryId]);
 
-    fetchInitialData();
-  }, [
-    user,
-    searchParams,
-    supabase,
-    router,
-    processAndSetData,
-    gridSize,
-    setHistoryState,
-    questions.length,
-  ]);
-
-  const handleGridSizeChange = (newSize: number) => {
-    if (!isQuizLoaded && isOwner) {
-      setGridSize(newSize);
-      setHistoryState(Array(newSize * newSize).fill(""), true);
-    }
-  };
-
-  useEffect(() => {
-    if (!currentQuizId || !isOwner) return;
-    const handler = setTimeout(async () => {
-      setAutoSaveStatus("Salvando...");
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      setAutoSaveStatus("Salvo ✓");
-    }, 2000);
-    return () => clearTimeout(handler);
-  }, [
-    title,
-    gridState,
-    questions,
-    categoryId,
-    currentQuizId,
-    isOwner,
-    supabase,
-  ]);
-
-  useEffect(() => {
-    setGridState(historyState);
-  }, [historyState]);
-
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.ctrlKey && event.key === "z") {
-        event.preventDefault();
-        undoGrid();
-      }
-      if (event.ctrlKey && event.key === "y") {
-        event.preventDefault();
-        redoGrid();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [undoGrid, redoGrid]);
-
-  const resetActiveToolIfNeeded = useCallback(
-    (removedAnswers: string[]) => {
-      if (activeTool && removedAnswers.includes(activeTool.answer))
-        setActiveTool(null);
-    },
-    [activeTool]
-  );
-  const checkForDuplicates = useCallback((qs: Question[]) => {
-    const answerCounts = new Map<string, number>();
-    qs.forEach((q) =>
-      q.options.forEach((opt) => {
-        if (opt.answer.trim())
-          answerCounts.set(opt.answer, (answerCounts.get(opt.answer) || 0) + 1);
-      })
-    );
-    const duplicates = new Set<string>();
-    for (const [answer, count] of answerCounts.entries()) {
-      if (count > 1) duplicates.add(answer);
-    }
-    setDuplicateAnswers(duplicates);
-  }, []);
-  useEffect(() => {
-    checkForDuplicates(questions);
-  }, [questions, checkForDuplicates]);
-  const clearAnswersFromGrid = useCallback(
-    (answersToClear: string[]) => {
-      if (answersToClear.length === 0) return;
-      resetActiveToolIfNeeded(answersToClear);
-      const answersSet = new Set(answersToClear);
-      const newGridState = gridState.map((cell) =>
-        answersSet.has(cell) ? "" : cell
-      );
-      setGridState(newGridState);
-      setHistoryState(newGridState);
-    },
-    [gridState, resetActiveToolIfNeeded, setHistoryState]
-  );
-  const paintCells = (index: number) => {
-    if (!isOwner) return;
-    setGridState((currentGrid) => {
-      const newGridState = [...currentGrid];
-      const startCol = index % gridSize;
-      const startRow = Math.floor(index / gridSize);
-      for (let r = 0; r < brushSize; r++) {
-        for (let c = 0; c < brushSize; c++) {
-          const targetRow = startRow + r;
-          const targetCol = startCol + c;
-          if (targetRow < gridSize && targetCol < gridSize) {
-            const targetIndex = targetRow * gridSize + targetCol;
-            if (isEraserActive) newGridState[targetIndex] = "";
-            else if (activeTool?.answer.trim())
-              newGridState[targetIndex] = activeTool.answer;
-          }
-        }
-      }
-      return newGridState;
-    });
-  };
-  const handleClearGrid = () => {
-    if (window.confirm("Tem certeza?")) {
-      const clearedGrid = Array(gridSize * gridSize).fill("");
-      setGridState(clearedGrid);
-      setHistoryState(clearedGrid);
-    }
-  };
-  const handleSetTool = (tool: ActiveTool | null) => {
-    setActiveTool(tool);
-    setIsEraserActive(false);
-  };
-  const handleSetEraser = () => {
-    setIsEraserActive(true);
-    setActiveTool(null);
-  };
-  const handleMouseUp = () => {
-    if (isPainting) {
-      setIsPainting(false);
-      if (
-        JSON.stringify(gridState) !==
-        JSON.stringify(gridStateBeforePaint.current)
-      )
-        setHistoryState(gridState);
-    }
-  };
-  const onNewQuizSaved = (quizId: string) => {
-    router.push(`/?quiz_id=${quizId}`);
-  };
-
-  if (isLoading) return <Spinner />;
-
-  const answerToColorMap = new Map<string, string>();
-  const answerToQuestionRefMap = new Map<string, string>();
-  questions.forEach((question, index) => {
-    const questionRef = `Q${index + 1}`;
-    if (
-      question.type === "single" &&
-      question.color &&
-      question.options[0]?.answer
-    ) {
-      answerToColorMap.set(question.options[0].answer, question.color.value);
-      answerToQuestionRefMap.set(
-        question.options[0].answer,
-        question.options[0].answer
-      );
-    } else if (question.type === "multiple" && question.optionColors) {
-      question.options.forEach((option) => {
-        const color = question.optionColors?.[option.id];
-        if (color && option.answer) {
-          answerToColorMap.set(option.answer, color.value);
-          answerToQuestionRefMap.set(option.answer, questionRef);
-        }
-      });
-    }
-  });
+  if (loading) return <Spinner />;
 
   return (
-    <div className="container mx-auto p-4 sm:p-6 lg:p-8">
-      <header className="text-center mb-8">
-        <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">
-          Gerador de Atividades &quot;Pinte por Resposta&quot;
-        </h1>
-        {currentQuizId && isOwner && (
-          <p className="text-sm text-gray-500 mt-2 h-5">{autoSaveStatus}</p>
-        )}
-      </header>
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr] xl:grid-cols-[380px_1fr_320px] gap-6 items-start">
-        <div className="space-y-6">
-          <div className="bg-white p-5 rounded-lg shadow-md h-fit border border-gray-200">
-            <GridSizeSelector
-              selectedSize={gridSize}
-              onChange={handleGridSizeChange}
-              disabled={isQuizLoaded || !isOwner}
-            />
-            {isQuizLoaded && (
-              <p className="text-xs text-gray-500 mt-2">
-                O tamanho da grade não pode ser alterado num questionário salvo.
-              </p>
-            )}
-          </div>
-          <ControlPanel
-            title={title}
-            setTitle={setTitle}
-            questions={questions}
-            setQuestions={setQuestions}
-            duplicateAnswers={duplicateAnswers}
-            setActiveTool={handleSetTool}
-            activeTool={activeTool}
-            clearAnswersFromGrid={clearAnswersFromGrid}
-            isOwner={isOwner}
-            categories={categories}
-            categoryId={categoryId}
-            setCategoryId={setCategoryId}
-          />
-        </div>
-        <div
-          className="self-start"
-          onMouseDown={() => {
-            if (!isOwner) return;
-            setIsPainting(true);
-            gridStateBeforePaint.current = gridState;
-          }}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
-        >
-          <InteractiveGrid
-            gridState={gridState}
-            gridSize={gridSize}
-            answerToColorMap={answerToColorMap}
-            answerToQuestionRefMap={answerToQuestionRefMap}
-            paintCells={paintCells}
-            isPainting={isPainting}
-          />
-        </div>
-        <ToolPanel
-          onClearGrid={handleClearGrid}
-          activityTitle={title}
-          questions={questions}
-          gridState={gridState}
-          gridSize={gridSize}
-          activeTool={activeTool}
-          brushSize={brushSize}
-          setBrushSize={setBrushSize}
-          isEraserActive={isEraserActive}
-          onSelectEraser={handleSetEraser}
-          quizId={currentQuizId}
-          isOwner={isOwner}
-          onNewQuizSaved={onNewQuizSaved}
-          categoryId={categoryId}
+    <>
+      <div className="w-full relative h-100 overflow-hidden">
+        {/* Altura ajustável (ex: h-56 = 224px) */}
+        <Image
+          src="/Criaprof Banner.jpeg"
+          alt="CriaProf Banner"
+          fill
+          objectFit="cover" // Preenche o espaço sem distorcer
+          objectPosition="center" // Centraliza a imagem
+          priority
         />
       </div>
-    </div>
-  );
-}
+      <div className="container mx-auto p-8">
+        <div className="text-center mb-10">
+          <h1 className="text-4xl font-bold text-gray-900">
+            Galeria de Templates
+          </h1>
+          <p className="text-lg text-gray-600 mt-4">
+            Escolha um modelo abaixo para começar rapidamente!
+            <br className="sm:hidden" /> ou crie a sua própria atividade.
+          </p>
+          <Link
+            href="/create"
+            className="mt-4 inline-block py-2 px-6 bg-yellow-600 text-white font-semibold rounded-md hover:bg-yellow-700 transition-colors"
+          >
+            Criar Atividade em Branco
+          </Link>
+        </div>
 
-export default function HomePage() {
-  return (
-    <Suspense fallback={<Spinner />}>
-      <HomePageContent />
-    </Suspense>
+        <div className="flex flex-col sm:flex-row justify-center items-center gap-4 mb-8 p-4 bg-white rounded-lg shadow-sm border">
+          <div className="w-full sm:w-auto">
+            <label
+              htmlFor="gridSize"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Tamanho da Grade
+            </label>
+            <select
+              id="gridSize"
+              value={selectedGridSize}
+              onChange={(e) => setSelectedGridSize(e.target.value)}
+              className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-yellow-500 focus:border-yellow-500 sm:text-sm rounded-md"
+            >
+              <option value="all">Todos</option>
+              <option value="10">10x10</option>
+              <option value="15">15x15</option>
+              <option value="20">20x20</option>
+            </select>
+          </div>
+
+          <div className="w-full sm:w-auto">
+            <label
+              htmlFor="category"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Disciplina
+            </label>
+            <select
+              id="category"
+              value={selectedCategoryId}
+              onChange={(e) => setSelectedCategoryId(e.target.value)}
+              className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-yellow-500 focus:border-yellow-500 sm:text-sm rounded-md"
+            >
+              <option value="all">Todas</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {templates.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {templates.map((template) => (
+              <div
+                key={template.id}
+                className="bg-white border border-gray-200 rounded-lg shadow-md p-6 flex flex-col transition-transform hover:scale-105"
+              >
+                <span className="text-xs font-semibold text-yellow-600 bg-yellow-100 px-2 py-1 rounded-full self-start mb-2">
+                  {getCategoryName(template.template_categories) ||
+                    "Sem Categoria"}
+                </span>
+                <h2 className="font-bold text-xl text-gray-900 mb-2">
+                  {template.title}
+                </h2>
+                <p className="text-gray-600 flex-grow mb-4 text-sm">
+                  {template.description}
+                </p>
+                <Link
+                  href={`/create?template_id=${template.id}`} // Link atualizado
+                  className="mt-auto text-center w-full py-2 px-4 bg-yellow-600 text-white font-semibold rounded-md hover:bg-yellow-700 transition-colors"
+                >
+                  Usar este Template
+                </Link>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-center text-gray-500 mt-10">
+            Nenhum template encontrado com os filtros selecionados.
+          </p>
+        )}
+      </div>
+    </>
   );
 }

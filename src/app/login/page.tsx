@@ -130,7 +130,7 @@ export default function LoginPage() {
         <button
           onClick={handleAuthAction}
           disabled={loading}
-          className="w-full h-10 flex items-center justify-center py-2 px-4 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 transition-colors disabled:bg-blue-400 disabled:cursor-not-allowed"
+          className="w-full h-10 flex items-center justify-center py-2 px-4 bg-yellow-500 text-white font-semibold rounded-md hover:bg-yellow-600 transition-colors disabled:bg-yellow-300 disabled:cursor-not-allowed"
         >
           {loading ? (
             <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -156,7 +156,7 @@ export default function LoginPage() {
               setIsSignUp(!isSignUp);
               setMessage("");
             }}
-            className="ml-1 font-semibold text-blue-600 hover:underline"
+            className="ml-1 font-semibold text-yellow-600 hover:underline"
           >
             {isSignUp ? "Faça login" : "Registe-se"}
           </button>

@@ -61,7 +61,7 @@ const BrushPanel = ({
             disabled={disabled}
             className={`w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-md border-2 transition-colors ${
               isEraserActive
-                ? "bg-blue-600 border-blue-600 text-white"
+                ? "bg-yellow-500 border-yellow-500 text-white"
                 : "bg-white border-gray-300 text-gray-600 hover:bg-gray-50"
             }`}
             title="Borracha"
@@ -97,7 +97,7 @@ const BrushPanel = ({
               disabled={disabled}
               className={`w-10 h-10 rounded-md text-sm font-semibold border transition-colors ${
                 brushSize === size
-                  ? "bg-blue-600 text-white border-blue-600"
+                  ? "bg-yellow-500 text-white border-yellow-500"
                   : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
               }`}
             >

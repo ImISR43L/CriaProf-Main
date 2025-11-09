@@ -392,7 +392,7 @@ export default function TemplateEditorPage() {
                   id="category"
                   value={categoryId || ""}
                   onChange={(e) => setCategoryId(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded-md bg-white focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full p-2 border border-gray-300 rounded-md bg-white focus:ring-yellow-500 focus:border-yellow-500"
                 >
                   <option value="" disabled>
                     Selecione...
@@ -417,7 +417,7 @@ export default function TemplateEditorPage() {
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Descreva o objetivo deste template."
                   rows={3}
-                  className="w-full p-2 border border-gray-300 rounded-md bg-white focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full p-2 border border-gray-300 rounded-md bg-white focus:ring-yellow-500 focus:border-yellow-500"
                 />
               </div>
             </div>
@@ -484,7 +484,7 @@ export default function TemplateEditorPage() {
               <button
                 onClick={handleSaveTemplate}
                 disabled={saving}
-                className="w-full bg-blue-600 text-white font-bold py-3 rounded-md hover:bg-blue-700 disabled:bg-blue-400"
+                className="w-full bg-yellow-600 text-white font-bold py-3 rounded-md hover:bg-yellow-700 disabled:bg-yellow-400"
               >
                 {saving ? "A salvar..." : "Salvar Template"}
               </button>

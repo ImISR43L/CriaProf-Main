@@ -41,7 +41,7 @@ export default function NewsPage() {
           {profile?.role === "admin" && (
             <Link
               href="/admin/news"
-              className="text-sm text-blue-600 hover:underline"
+              className="text-sm text-yellow-600 hover:underline"
             >
               (Gerir)
             </Link>

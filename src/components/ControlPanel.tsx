@@ -107,7 +107,7 @@ const ControlPanel = ({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Ex: Revisão de Matemática"
-            className="w-full p-2 border border-gray-300 rounded-md bg-white text-gray-900 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+            className="w-full p-2 border border-gray-300 rounded-md bg-white text-gray-900 focus:ring-yellow-500 focus:border-yellow-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
             disabled={!isOwner}
           />
         </div>
@@ -124,7 +124,7 @@ const ControlPanel = ({
               value={categoryId || ""}
               onChange={(e) => setCategoryId(e.target.value)}
               disabled={!isOwner}
-              className="w-full p-2 border border-gray-300 rounded-md bg-white text-gray-900 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+              className="w-full p-2 border border-gray-300 rounded-md bg-white text-gray-900 focus:ring-yellow-500 focus:border-yellow-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
             >
               <option value="" disabled>
                 Selecione uma categoria

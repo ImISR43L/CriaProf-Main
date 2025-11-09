@@ -155,7 +155,7 @@ const ActionsPanel = ({
             <button
               onClick={handleSaveQuiz}
               disabled={isSaving}
-              className="w-full bg-blue-600 text-white font-bold py-3 rounded-md hover:bg-blue-700 transition-colors disabled:bg-blue-400"
+              className="w-full bg-yellow-500 text-white font-bold py-3 rounded-md hover:bg-yellow-600 transition-colors disabled:bg-yellow-300"
             >
               {isSaving
                 ? "A Salvar..."

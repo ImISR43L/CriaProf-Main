@@ -118,7 +118,7 @@ export default function AdminNewsPage() {
           <div className="flex items-center gap-4">
             <button
               onClick={handleSave}
-              className="py-2 px-6 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              className="py-2 px-6 bg-yellow-600 text-white rounded-md hover:bg-yellow-700"
             >
               Salvar
             </button>
@@ -141,7 +141,7 @@ export default function AdminNewsPage() {
         <h1 className="text-3xl font-bold">Gerir Notícias</h1>
         <button
           onClick={handleAddNew}
-          className="py-2 px-4 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700"
+          className="py-2 px-4 bg-yellow-600 text-white font-semibold rounded-md hover:bg-yellow-700"
         >
           + Adicionar Notícia
         </button>
@@ -162,7 +162,7 @@ export default function AdminNewsPage() {
               <div className="flex items-center gap-4">
                 <button
                   onClick={() => setEditingPost(post)}
-                  className="text-blue-600 font-semibold hover:underline"
+                  className="text-yellow-600 font-semibold hover:underline"
                 >
                   Editar
                 </button>

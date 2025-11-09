@@ -70,7 +70,7 @@ export default function AdminTemplatesPage() {
         <h1 className="text-3xl font-bold text-gray-900">Gerir Templates</h1>
         <Link
           href="/admin/templates/editor/new"
-          className="py-2 px-4 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 transition-colors"
+          className="py-2 px-4 bg-yellow-600 text-white font-semibold rounded-md hover:bg-yellow-700 transition-colors"
         >
           + Criar Novo Template
         </Link>
@@ -96,7 +96,7 @@ export default function AdminTemplatesPage() {
                 <div className="flex items-center gap-4">
                   <Link
                     href={`/admin/templates/editor/${template.id}`}
-                    className="text-blue-600 font-semibold hover:underline px-2"
+                    className="text-yellow-600 font-semibold hover:underline px-2"
                   >
                     Editar
                   </Link>

@@ -168,7 +168,7 @@ export default function AdminRoadmapPage() {
           <div className="flex items-center gap-4">
             <button
               onClick={handleSave}
-              className="py-2 px-6 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              className="py-2 px-6 bg-yellow-600 text-white rounded-md hover:bg-yellow-700"
             >
               Salvar
             </button>
@@ -191,7 +191,7 @@ export default function AdminRoadmapPage() {
         <h1 className="text-3xl font-bold">Gerir Roadmap</h1>
         <button
           onClick={handleAddNew}
-          className="py-2 px-4 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700"
+          className="py-2 px-4 bg-yellow-600 text-white font-semibold rounded-md hover:bg-yellow-700"
         >
           + Adicionar Item
         </button>
@@ -212,7 +212,7 @@ export default function AdminRoadmapPage() {
               <div className="flex items-center gap-4">
                 <button
                   onClick={() => setEditingItem(item)}
-                  className="text-blue-600 font-semibold hover:underline"
+                  className="text-yellow-600 font-semibold hover:underline"
                 >
                   Editar
                 </button>

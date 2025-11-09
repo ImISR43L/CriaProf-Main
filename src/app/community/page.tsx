@@ -221,7 +221,7 @@ export default function CommunityPage() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Digite o título..."
-            className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+            className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-yellow-500 focus:border-yellow-500 sm:text-sm rounded-md"
           />
         </div>
         <div>
@@ -235,7 +235,7 @@ export default function CommunityPage() {
             id="gridSize"
             value={selectedGridSize}
             onChange={(e) => setSelectedGridSize(e.target.value)}
-            className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+            className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-yellow-500 focus:border-yellow-500 sm:text-sm rounded-md"
           >
             <option value="all">Todos</option>
             <option value="10">10x10</option>
@@ -254,7 +254,7 @@ export default function CommunityPage() {
             id="category"
             value={selectedCategoryId}
             onChange={(e) => setSelectedCategoryId(e.target.value)}
-            className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+            className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-yellow-500 focus:border-yellow-500 sm:text-sm rounded-md"
           >
             <option value="all">Todas</option>
             {categories.map((cat) => (
@@ -275,7 +275,7 @@ export default function CommunityPage() {
               key={quiz.id}
               className="bg-white border border-gray-200 rounded-lg shadow-md p-6 flex flex-col transition-transform hover:scale-105"
             >
-              <span className="text-xs font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded-full self-start mb-2">
+              <span className="text-xs font-semibold text-yellow-600 bg-yellow-100 px-2 py-1 rounded-full self-start mb-2">
                 {getCategoryName(quiz.template_categories) || "Sem Categoria"}
               </span>
               <h2 className="font-bold text-xl text-gray-900 mb-2">
@@ -286,8 +286,8 @@ export default function CommunityPage() {
               </p>
               <div className="mt-auto space-y-2">
                 <Link
-                  href={`/?quiz_id=${quiz.id}`}
-                  className="block text-center w-full py-2 px-4 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700"
+                  href={`/create?quiz_id=${quiz.id}`}
+                  className="block text-center w-full py-2 px-4 bg-yellow-600 text-white font-semibold rounded-md hover:bg-yellow-700"
                 >
                   Ver e Usar
                 </Link>

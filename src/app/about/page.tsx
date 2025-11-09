@@ -79,8 +79,8 @@ export default function AboutPage() {
 
       <div className="text-center mt-10">
         <Link
-          href="/"
-          className="py-2 px-6 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 transition-colors"
+          href="/create"
+          className="py-2 px-6 bg-yellow-600 text-white font-semibold rounded-md hover:bg-yellow-700 transition-colors"
         >
           Voltar para o Gerador
         </Link>

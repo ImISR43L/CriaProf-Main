@@ -25,7 +25,7 @@ const GridSizeSelector = ({
             disabled={disabled}
             className={`px-4 py-2 rounded-md text-sm font-semibold border transition-colors ${
               selectedSize === size
-                ? "bg-blue-600 text-white border-blue-600"
+                ? "bg-yellow-500 text-white border-yellow-500"
                 : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
             } disabled:bg-gray-200 disabled:cursor-not-allowed`}
           >

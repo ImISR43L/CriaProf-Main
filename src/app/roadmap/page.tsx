@@ -65,7 +65,7 @@ export default function RoadmapPage() {
           {profile?.role === "admin" && (
             <Link
               href="/admin/roadmap"
-              className="text-sm text-blue-600 hover:underline"
+              className="text-sm text-yellow-600 hover:underline"
             >
               (Gerir)
             </Link>

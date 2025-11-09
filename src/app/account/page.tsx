@@ -78,13 +78,13 @@ export default function AccountPage() {
             type="text"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
-            className="w-full p-2 mt-1 border border-gray-300 rounded-md bg-white text-gray-900 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full p-2 mt-1 border border-gray-300 rounded-md bg-white text-gray-900 focus:ring-yellow-500 focus:border-yellow-500"
             placeholder="Seu nome aparecerá nos quizzes públicos"
           />
         </div>
         <button
           onClick={handleUpdateProfile}
-          className="w-full py-2 px-4 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 transition-colors"
+          className="w-full py-2 px-4 bg-yellow-600 text-white font-semibold rounded-md hover:bg-yellow-700 transition-colors"
         >
           Salvar Alterações
         </button>

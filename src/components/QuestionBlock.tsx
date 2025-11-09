@@ -176,7 +176,7 @@ const QuestionBlock = ({
             value={question.type}
             onChange={(e) => handleTypeChange(e.target.value as QuestionType)}
             disabled={disabled}
-            className="p-1 text-sm border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+            className="p-1 text-sm border border-gray-300 rounded-md focus:ring-yellow-500 focus:border-yellow-500"
           >
             <option value="single">Resposta Única</option>
             <option value="multiple">Múltipla Escolha</option>
@@ -237,7 +237,7 @@ const QuestionBlock = ({
                     readOnly={disabled}
                     className={`w-full p-2 border rounded-md text-sm ${
                       isDuplicate ? "border-red-500" : "border-gray-300"
-                    } ${isActive ? "ring-2 ring-blue-500" : ""}`}
+                    } ${isActive ? "ring-2 ring-yellow-500" : ""}`}
                   />
                   {isDuplicate && (
                     <p className="text-xs text-red-600 mt-1">
@@ -312,7 +312,7 @@ const QuestionBlock = ({
                     }
                     readOnly={disabled}
                     className={`w-full p-2 border rounded-md text-sm border-gray-300 ${
-                      isActive ? "ring-2 ring-blue-500" : ""
+                      isActive ? "ring-2 ring-yellow-500" : ""
                     }`}
                   />
                 </div>

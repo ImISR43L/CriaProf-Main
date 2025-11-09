@@ -1,3 +1,4 @@
+// src/app/dashboard/page.tsx
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -27,7 +28,7 @@ export default function DashboardPage() {
     const fetchQuizzes = async () => {
       if (!user) return;
       setLoading(true);
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("quizzes")
         .select("id, title, created_at, is_public")
         .eq("user_id", user.id)
@@ -82,8 +83,8 @@ export default function DashboardPage() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Meus Questionários</h1>
         <Link
-          href="/"
-          className="py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          href="/create"
+          className="py-2 px-4 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition-colors"
         >
           + Criar Novo
         </Link>
@@ -106,8 +107,8 @@ export default function DashboardPage() {
                   </div>
                   <div className="flex items-center gap-2 sm:gap-4">
                     <Link
-                      href={`/?quiz_id=${quiz.id}`}
-                      className="text-blue-600 font-semibold hover:underline px-2"
+                      href={`/create?quiz_id=${quiz.id}`}
+                      className="text-yellow-600 font-semibold hover:underline px-2"
                     >
                       Abrir
                     </Link>
@@ -142,8 +143,8 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 {quiz.is_public && (
-                  <div className="mt-3 bg-blue-50 p-3 rounded-md">
-                    <label className="text-sm font-semibold text-blue-800">
+                  <div className="mt-3 bg-yellow-50 p-3 rounded-md">
+                    <label className="text-sm font-semibold text-yellow-800">
                       Link Público:
                     </label>
                     <input
@@ -155,7 +156,7 @@ export default function DashboardPage() {
                         navigator.clipboard.writeText(getShareLink(quiz.id));
                         alert("Link copiado para a área de transferência!");
                       }}
-                      className="w-full p-1 mt-1 bg-white border border-blue-200 rounded text-sm cursor-pointer text-gray-700"
+                      className="w-full p-1 mt-1 bg-white border border-yellow-200 rounded text-sm cursor-pointer text-gray-700"
                     />
                   </div>
                 )}
