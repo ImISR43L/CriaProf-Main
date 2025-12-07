@@ -172,10 +172,20 @@ export default function TemplateEditorPage() {
   ]);
 
   const handleGridSizeChange = (newSize: number) => {
-    if (isNewTemplate) {
-      setGridSize(newSize);
-      setHistoryState(Array(newSize * newSize).fill(""), true);
+    if (!isNewTemplate) return;
+
+    // Verifica se existe algum conteúdo na grade atual
+    const hasDrawing = gridState.some((cell) => cell !== "");
+
+    if (hasDrawing) {
+      const confirmed = window.confirm(
+        "Atenção: Mudar o tamanho da grade apagará todo o desenho atual. Deseja continuar?"
+      );
+      if (!confirmed) return;
     }
+
+    setGridSize(newSize);
+    setHistoryState(Array(newSize * newSize).fill(""), true);
   };
 
   const handleSaveTemplate = async () => {

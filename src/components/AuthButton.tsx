@@ -4,7 +4,8 @@ import { useRouter } from "next/navigation";
 import { useSupabase } from "@/components/AuthProvider";
 
 export default function AuthButton() {
-  const { user, supabase } = useSupabase();
+  // Adicionado 'profile' para acessar o nome completo
+  const { user, profile, supabase } = useSupabase();
   const router = useRouter();
 
   const handleSignOut = async () => {
@@ -33,7 +34,8 @@ export default function AuthButton() {
         className="text-sm font-medium text-gray-600 hover:text-yellow-600 transition-colors"
         title="Minha Conta"
       >
-        Olá, {user.email?.split("@")[0]}
+        {/* Alterado para priorizar profile.full_name, mantendo o email como fallback */}
+        Olá, {profile?.full_name || user.email?.split("@")[0]}
       </Link>
       <button
         onClick={handleSignOut}

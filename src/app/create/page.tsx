@@ -144,7 +144,9 @@ function CreatePageContent() {
   // Função inteligente para atualizar a pergunta e sincronizar a grade
   const handleQuestionUpdate = (updatedQuestion: Question) => {
     setQuestions((prevQuestions) => {
-      const oldQuestion = prevQuestions.find((q) => q.id === updatedQuestion.id);
+      const oldQuestion = prevQuestions.find(
+        (q) => q.id === updatedQuestion.id
+      );
 
       if (!oldQuestion) return prevQuestions;
 
@@ -293,10 +295,21 @@ function CreatePageContent() {
   ]);
 
   const handleGridSizeChange = (newSize: number) => {
-    if (!isQuizLoaded && isOwner) {
-      setGridSize(newSize);
-      setHistoryState(Array(newSize * newSize).fill(""), true);
+    // Verifica se é o dono e se não é um quiz carregado (que bloqueia mudança de tamanho)
+    if (isQuizLoaded || !isOwner) return;
+
+    // Verifica se existe algum conteúdo na grade atual
+    const hasDrawing = gridState.some((cell) => cell !== "");
+
+    if (hasDrawing) {
+      const confirmed = window.confirm(
+        "Atenção: Mudar o tamanho da grade apagará todo o desenho atual. Deseja continuar?"
+      );
+      if (!confirmed) return;
     }
+
+    setGridSize(newSize);
+    setHistoryState(Array(newSize * newSize).fill(""), true);
   };
 
   useEffect(() => {

@@ -16,14 +16,30 @@ const getQuestionBlockHeight = (
   const blockPadding = 5;
 
   doc.setFontSize(baseFontSize);
+  // Texto base da pergunta
   const questionText = `(${questionRef}) ${question.text || ""}`;
-  const titleLines = doc.splitTextToSize(questionText, width - 6);
-  height += titleLines.length * lineSpacing;
+
+  // Se for Single, a cor está associada à pergunta inteira
+  if (!isMulti && question.color) {
+    const fullText = `${question.color.name}: ${questionText}`;
+    const lines = doc.splitTextToSize(fullText, width);
+    height += lines.length * lineSpacing;
+  } else {
+    // Se for Multi ou Single sem cor (incomum), calcula só o texto
+    const titleLines = doc.splitTextToSize(questionText, width);
+    height += titleLines.length * lineSpacing;
+  }
 
   if (isMulti && question.optionColors) {
     height += 2; // Espaço antes das opções
     question.options.forEach((opt) => {
-      const optionLines = doc.splitTextToSize(`${opt.text || ""}`, width - 8);
+      // Recupera a cor desta opção para incluir o nome no cálculo
+      const color = question.optionColors?.[opt.id];
+      const colorPrefix = color ? `${color.name}: ` : "";
+      // Texto estimado: "Azul: a) Texto da opção"
+      const optionFullText = `${colorPrefix}a) ${opt.text || ""}`;
+
+      const optionLines = doc.splitTextToSize(optionFullText, width);
       height += optionLines.length * lineSpacing + 2;
     });
   }
@@ -47,13 +63,14 @@ const drawQuestionBlock = (
 
   if (question.type === "single" && question.color) {
     doc.setFontSize(baseFontSize);
+    // Removemos o offset do retângulo (width - 6 -> width)
     currentY = drawLegendLine(
       doc,
       x,
       currentY,
       question.color,
       questionText,
-      width - 6
+      width
     );
   } else if (question.type === "multiple" && question.optionColors) {
     doc.setFont("helvetica", "bold");
@@ -70,13 +87,16 @@ const drawQuestionBlock = (
           ? option.answer.split("-")[1]
           : option.answer;
         const optionText = `${displayLetter}) ${option.text || ""}`;
+
+        // Removemos o offset do retângulo (x + 2 -> x, width - 8 -> width)
+        // Mantemos um pequeno recuo visual (x+2) se desejar indentação
         currentY = drawLegendLine(
           doc,
           x + 2,
           currentY,
           color,
           optionText,
-          width - 8
+          width - 2
         );
       }
     });
@@ -92,10 +112,14 @@ const drawLegendLine = (
   text: string,
   width: number
 ): number => {
-  const splitText = doc.splitTextToSize(text, width);
-  doc.setFillColor(color.value);
-  doc.rect(x, y, 4, 4, "F");
-  doc.text(splitText, x + 6, y + 3.5);
+  // Construímos o texto com o nome da cor: "Azul: (A) Opção..."
+  const fullText = `${color.name}: ${text}`;
+
+  const splitText = doc.splitTextToSize(fullText, width);
+
+  // Apenas desenha o texto, sem retângulo e sem mudar a cor de preenchimento
+  doc.text(splitText, x, y + 3.5);
+
   return y + splitText.length * 4 + 2;
 };
 
