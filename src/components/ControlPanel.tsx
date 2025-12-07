@@ -9,6 +9,7 @@ interface ControlPanelProps {
   setTitle: (title: string) => void;
   questions: Question[];
   setQuestions: React.Dispatch<React.SetStateAction<Question[]>>;
+  onQuestionUpdate?: (question: Question) => void;
   duplicateAnswers: Set<string>;
   setActiveTool: (tool: ActiveTool | null) => void;
   activeTool: ActiveTool | null;
@@ -25,6 +26,7 @@ const ControlPanel = ({
   setTitle,
   questions,
   setQuestions,
+  onQuestionUpdate,
   duplicateAnswers,
   setActiveTool,
   activeTool,
@@ -71,9 +73,18 @@ const ControlPanel = ({
 
   const handleQuestionChange = (updatedQuestion: Question) => {
     if (!isOwner) return;
-    setQuestions(
-      questions.map((q) => (q.id === updatedQuestion.id ? updatedQuestion : q))
-    );
+    
+    // Se a função nova for fornecida (na página Create), usa ela.
+    // Caso contrário (ex: outras páginas), usa o setQuestions padrão.
+    if (onQuestionUpdate) {
+      onQuestionUpdate(updatedQuestion);
+    } else {
+      setQuestions(
+        questions.map((q) =>
+          q.id === updatedQuestion.id ? updatedQuestion : q
+        )
+      );
+    }
   };
 
   const handleRemoveQuestion = (idToRemove: number) => {

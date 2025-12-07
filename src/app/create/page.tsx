@@ -127,6 +127,82 @@ function CreatePageContent() {
     [setHistoryState]
   );
 
+  // Função para substituir valores na grade (ex: trocou a resposta certa de A para B)
+  const replaceGridValues = useCallback(
+    (oldVal: string, newVal: string) => {
+      // CORREÇÃO: Impede que o sistema substitua células vazias ("")
+      // Isso evita que a grade inteira seja pintada ao criar/mudar perguntas
+      if (!oldVal || oldVal.trim() === "") return;
+
+      setHistoryState((prevState) => {
+        return prevState.map((cell) => (cell === oldVal ? newVal : cell));
+      });
+    },
+    [setHistoryState]
+  );
+
+  // Função inteligente para atualizar a pergunta e sincronizar a grade
+  const handleQuestionUpdate = (updatedQuestion: Question) => {
+    setQuestions((prevQuestions) => {
+      const oldQuestion = prevQuestions.find((q) => q.id === updatedQuestion.id);
+
+      if (!oldQuestion) return prevQuestions;
+
+      // --- LÓGICA 1: MÚLTIPLA ESCOLHA (Troca de Opção Correta) ---
+      if (
+        updatedQuestion.type === "multiple" &&
+        oldQuestion.correctOptionId !== updatedQuestion.correctOptionId
+      ) {
+        const oldCorrectOpt = oldQuestion.options.find(
+          (o) => o.id === oldQuestion.correctOptionId
+        );
+        const newCorrectOpt = updatedQuestion.options.find(
+          (o) => o.id === updatedQuestion.correctOptionId
+        );
+
+        if (oldCorrectOpt && newCorrectOpt && oldCorrectOpt.answer) {
+          replaceGridValues(oldCorrectOpt.answer, newCorrectOpt.answer);
+
+          if (activeTool?.answer === oldCorrectOpt.answer) {
+            const newColor =
+              updatedQuestion.optionColors?.[newCorrectOpt.id] ||
+              schoolColorPalette[0];
+            setActiveTool({ answer: newCorrectOpt.answer, color: newColor });
+          }
+        }
+      }
+
+      // --- LÓGICA 2: RESPOSTA ÚNICA (Mudança de Texto da Resposta) ---
+      if (updatedQuestion.type === "single") {
+        const oldOption = oldQuestion.options[0];
+        const newOption = updatedQuestion.options[0];
+
+        // Verifica se a resposta mudou e se a antiga não era vazia
+        if (
+          oldOption &&
+          newOption &&
+          oldOption.answer !== newOption.answer &&
+          oldOption.answer.trim() !== ""
+        ) {
+          // 1. Substitui na grade (ex: troca todos os "32" por "34")
+          replaceGridValues(oldOption.answer, newOption.answer);
+
+          // 2. Atualiza a ferramenta ativa se o usuário estiver com ela selecionada
+          if (activeTool?.answer === oldOption.answer) {
+            setActiveTool({
+              answer: newOption.answer,
+              color: updatedQuestion.color || schoolColorPalette[0],
+            });
+          }
+        }
+      }
+
+      return prevQuestions.map((q) =>
+        q.id === updatedQuestion.id ? updatedQuestion : q
+      );
+    });
+  };
+
   useEffect(() => {
     const fetchInitialData = async () => {
       const quizId = searchParams.get("quiz_id");
@@ -213,9 +289,7 @@ function CreatePageContent() {
     supabase,
     router,
     processAndSetData,
-    gridSize,
     setHistoryState,
-    questions.length,
   ]);
 
   const handleGridSizeChange = (newSize: number) => {
@@ -405,6 +479,7 @@ function CreatePageContent() {
             setTitle={setTitle}
             questions={questions}
             setQuestions={setQuestions}
+            onQuestionUpdate={handleQuestionUpdate}
             duplicateAnswers={duplicateAnswers}
             setActiveTool={handleSetTool}
             activeTool={activeTool}

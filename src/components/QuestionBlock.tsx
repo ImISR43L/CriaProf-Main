@@ -262,17 +262,26 @@ const QuestionBlock = ({
           <div className="space-y-3">
             {question.options.map((opt) => {
               const color = question.optionColors?.[opt.id];
-              const isActive =
-                activeTool?.answer === opt.answer &&
-                activeTool?.color.value === color?.value;
+              
+              // LÓGICA NOVA: Verifica se ESTA PERGUNTA é a que está ativa na ferramenta.
+              // Compara a resposta da ferramenta ativa com a resposta da OPÇÃO CORRETA desta pergunta.
+              const correctOption = question.options.find(o => o.id === question.correctOptionId);
+              const isQuestionActive = activeTool?.answer === correctOption?.answer;
+
               // Extrai a letra do valor da resposta para exibição
               const displayLetter = opt.answer.includes("-")
                 ? opt.answer.split("-")[1]
                 : opt.answer;
+
               return (
                 <div
                   key={opt.id}
-                  className="flex items-center gap-3 p-2 rounded-md bg-white border"
+                  className={`flex items-center gap-3 p-2 rounded-md border transition-all ${
+                    // Destaca visualmente se esta é a pergunta ativa
+                    isQuestionActive 
+                      ? "bg-yellow-50 border-yellow-400 ring-1 ring-yellow-400" 
+                      : "bg-white border-gray-200"
+                  }`}
                 >
                   <input
                     type="radio"
@@ -282,8 +291,9 @@ const QuestionBlock = ({
                     onChange={() =>
                       onChange({ ...question, correctOptionId: opt.id })
                     }
+                    className="cursor-pointer accent-yellow-600 w-4 h-4"
                   />
-                  <span className="font-mono font-bold">{displayLetter}.</span>
+                  <span className="font-mono font-bold text-gray-700">{displayLetter}.</span>
                   <ColorPicker
                     selectedColor={color!}
                     disabled={disabled}
@@ -305,15 +315,20 @@ const QuestionBlock = ({
                     onChange={(e) =>
                       handleTextChange("text", e.target.value, opt.id)
                     }
-                    onClick={() =>
-                      !disabled &&
-                      color &&
-                      setActiveTool({ answer: opt.answer, color: color })
-                    }
+                    // MUDANÇA CRÍTICA AQUI:
+                    // Ao clicar em qualquer input de texto, selecionamos a OPÇÃO CORRETA como pincel
+                    onClick={() => {
+                        if (!disabled) {
+                            const correctOpt = question.options.find(o => o.id === question.correctOptionId);
+                            const correctCol = question.optionColors?.[question.correctOptionId];
+                            
+                            if (correctOpt && correctCol) {
+                                setActiveTool({ answer: correctOpt.answer, color: correctCol });
+                            }
+                        }
+                    }}
                     readOnly={disabled}
-                    className={`w-full p-2 border rounded-md text-sm border-gray-300 ${
-                      isActive ? "ring-2 ring-yellow-500" : ""
-                    }`}
+                    className="w-full p-2 border border-gray-300 rounded-md text-sm focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 outline-none"
                   />
                 </div>
               );

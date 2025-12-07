@@ -150,27 +150,30 @@ const ActionsPanel = ({
         >
           Gerar PDF
         </button>
+
+        {/* Bloco Exclusivo para Usuários Logados (Salvar) */}
         {user && isOwner && (
-          <>
-            <button
-              onClick={handleSaveQuiz}
-              disabled={isSaving}
-              className="w-full bg-yellow-500 text-white font-bold py-3 rounded-md hover:bg-yellow-600 transition-colors disabled:bg-yellow-300"
-            >
-              {isSaving
-                ? "A Salvar..."
-                : quizId
-                ? "Salvar Alterações"
-                : "Salvar Questionário"}
-            </button>
-            <button
-              onClick={onClearGrid}
-              className="w-full bg-gray-500 text-white font-bold py-3 rounded-md hover:bg-gray-600 transition-colors"
-            >
-              Limpar Grade
-            </button>
-          </>
+          <button
+            onClick={handleSaveQuiz}
+            disabled={isSaving}
+            className="w-full bg-yellow-500 text-white font-bold py-3 rounded-md hover:bg-yellow-600 transition-colors disabled:bg-yellow-300"
+          >
+            {isSaving
+              ? "A Salvar..."
+              : quizId
+              ? "Salvar Alterações"
+              : "Salvar Questionário"}
+          </button>
         )}
+
+        {/* CORREÇÃO: Botão movido para fora da condição "user && isOwner" */}
+        <button
+          onClick={onClearGrid}
+          className="w-full bg-gray-500 text-white font-bold py-3 rounded-md hover:bg-gray-600 transition-colors"
+        >
+          Limpar Grade
+        </button>
+
         {message && (
           <p className="text-sm text-center text-green-600 mt-2">{message}</p>
         )}
