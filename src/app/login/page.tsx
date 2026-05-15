@@ -92,7 +92,9 @@ export default function LoginPage() {
       setMessage(`Erro: ${error.message}`);
       setMessageType("error");
     } else {
-      setMessage("Instruções de recuperação enviadas para o seu e-mail!");
+      setMessage(
+        "Instruções enviadas! Importante: Abra o link do e-mail neste mesmo navegador/dispositivo.",
+      );
       setMessageType("success");
     }
     setLoading(false);

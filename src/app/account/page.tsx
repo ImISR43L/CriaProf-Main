@@ -52,7 +52,7 @@ export default function AccountPage() {
   const handleSendResetEmail = async () => {
     if (!user?.email) return;
     setResetMessage("");
-    
+
     const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
       redirectTo: `${window.location.origin}/reset-password`,
     });
@@ -60,7 +60,9 @@ export default function AccountPage() {
     if (error) {
       setResetMessage(`Erro: ${error.message}`);
     } else {
-      setResetMessage("E-mail para redefinir senha enviado! Verifique sua caixa de entrada.");
+      setResetMessage(
+        "E-mail enviado! Abra o link usando este mesmo navegador.",
+      );
     }
   };
 
@@ -111,7 +113,9 @@ export default function AccountPage() {
 
         {/* NOVA SEÇÃO: Redefinir Senha */}
         <div className="pt-6 mt-6 border-t border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900 mb-2">Segurança</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-2">
+            Segurança
+          </h2>
           <button
             onClick={handleSendResetEmail}
             className="w-full py-2 px-4 bg-white border border-gray-300 text-gray-700 font-semibold rounded-md hover:bg-gray-50 transition-colors"
