@@ -39,7 +39,7 @@ export default function LoginPage() {
           setMessageType("error");
         } else {
           setMessage(
-            "Cadastro realizado! Verifique o seu e-mail para confirmar a conta."
+            "Cadastro realizado! Verifique o seu e-mail para confirmar a conta.",
           );
           setMessageType("success");
         }
@@ -66,15 +66,28 @@ export default function LoginPage() {
   // NOVA FUNÇÃO: Esqueci a Senha
   const handleResetPassword = async () => {
     if (!email) {
-      setMessage("Por favor, digite seu e-mail no campo acima para recuperar a senha.");
+      setMessage(
+        "Por favor, digite seu e-mail no campo acima para recuperar a senha.",
+      );
       setMessageType("error");
       return;
     }
+
+    // NOVA VALIDAÇÃO: Checa se o e-mail tem um formato válido (contém @ e .)
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setMessage(
+        "Por favor, digite um endereço de e-mail válido (ex: nome@email.com).",
+      );
+      setMessageType("error");
+      return;
+    }
+
     setLoading(true);
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reset-password`,
     });
-    
+
     if (error) {
       setMessage(`Erro: ${error.message}`);
       setMessageType("error");
