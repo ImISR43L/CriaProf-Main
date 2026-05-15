@@ -1,6 +1,6 @@
 {
   "name": "criaprof",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -11,7 +11,7 @@
   "dependencies": {
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.58.0",
-    "jspdf": "^3.0.3",
+    "jspdf": "^4.2.1",
     "next": "^16.0.7",
     "react": "^19.2.1",
     "react-dom": "^19.2.1"
@@ -27,5 +27,8 @@
     "eslint-config-next": "15.5.4",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "overrides": {
+    "postcss": "^8.5.10"
   }
 }

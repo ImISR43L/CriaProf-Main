@@ -7,7 +7,7 @@ const getQuestionBlockHeight = (
   doc: jsPDF,
   question: Question,
   questionRef: number,
-  width: number
+  width: number,
 ): number => {
   let height = 0;
   const isMulti = question.type === "multiple";
@@ -36,8 +36,9 @@ const getQuestionBlockHeight = (
       // Recupera a cor desta opção para incluir o nome no cálculo
       const color = question.optionColors?.[opt.id];
       const colorPrefix = color ? `${color.name}: ` : "";
-      // Texto estimado: "Azul: a) Texto da opção"
-      const optionFullText = `${colorPrefix}a) ${opt.text || ""}`;
+
+      // MUDANÇA AQUI: Removida a estimativa do "a)"
+      const optionFullText = `${colorPrefix}${opt.text || ""}`;
 
       const optionLines = doc.splitTextToSize(optionFullText, width);
       height += optionLines.length * lineSpacing + 2;
@@ -53,7 +54,7 @@ const drawQuestionBlock = (
   questionRef: number,
   x: number,
   y: number,
-  width: number
+  width: number,
 ): number => {
   let currentY = y;
   const isMulti = question.type === "multiple";
@@ -63,14 +64,13 @@ const drawQuestionBlock = (
 
   if (question.type === "single" && question.color) {
     doc.setFontSize(baseFontSize);
-    // Removemos o offset do retângulo (width - 6 -> width)
     currentY = drawLegendLine(
       doc,
       x,
       currentY,
       question.color,
       questionText,
-      width
+      width,
     );
   } else if (question.type === "multiple" && question.optionColors) {
     doc.setFont("helvetica", "bold");
@@ -83,20 +83,17 @@ const drawQuestionBlock = (
     question.options.forEach((option) => {
       const color = question.optionColors?.[option.id];
       if (color) {
-        const displayLetter = option.answer.includes("-")
-          ? option.answer.split("-")[1]
-          : option.answer;
-        const optionText = `${displayLetter}) ${option.text || ""}`;
+        // MUDANÇA AQUI: Removemos o "displayLetter" (A, B, C...)
+        // Agora exibirá apenas o texto da alternativa direto.
+        const optionText = option.text || "";
 
-        // Removemos o offset do retângulo (x + 2 -> x, width - 8 -> width)
-        // Mantemos um pequeno recuo visual (x+2) se desejar indentação
         currentY = drawLegendLine(
           doc,
           x + 2,
           currentY,
           color,
           optionText,
-          width - 2
+          width - 2,
         );
       }
     });
@@ -110,9 +107,9 @@ const drawLegendLine = (
   y: number,
   color: SchoolColor,
   text: string,
-  width: number
+  width: number,
 ): number => {
-  // Construímos o texto com o nome da cor: "Azul: (A) Opção..."
+  // Construímos o texto com o nome da cor. Exemplo: "Azul: Opção escolhida..."
   const fullText = `${color.name}: ${text}`;
 
   const splitText = doc.splitTextToSize(fullText, width);
@@ -127,7 +124,7 @@ export const generatePdf = (
   activityTitle: string,
   questions: Question[],
   gridState: string[],
-  gridSize: number
+  gridSize: number,
 ) => {
   const doc = new jsPDF("p", "mm", "a4");
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -199,7 +196,7 @@ export const generatePdf = (
       doc,
       question,
       questionRef,
-      rightColWidth
+      rightColWidth,
     );
     if (rightColY + height < gridBottomY) {
       if (!legendStarted) {
@@ -214,7 +211,7 @@ export const generatePdf = (
         questionRef,
         rightColX,
         rightColY,
-        rightColWidth
+        rightColWidth,
       );
       questionRef++;
     } else {
@@ -244,7 +241,7 @@ export const generatePdf = (
         doc,
         question,
         questionRef,
-        columnWidth
+        columnWidth,
       );
 
       if (docY + height > pageHeight - margin && docY > legendTopY) {
@@ -269,7 +266,7 @@ export const generatePdf = (
         questionRef,
         currentX,
         docY,
-        columnWidth
+        columnWidth,
       );
       questionRef++;
     }
