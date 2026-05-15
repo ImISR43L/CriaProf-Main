@@ -77,10 +77,26 @@ export default function AboutPage() {
         </ul>
       </div>
 
+      {/* Nova Secção de Links Movidos do Header */}
+      <div className="mt-8 pt-6 border-t border-gray-200 text-center">
+        <h3 className="text-xl font-bold mb-4 text-gray-900">Saiba mais</h3>
+        <div className="flex flex-wrap justify-center gap-6">
+          <Link href="/news" className="text-yellow-600 hover:text-yellow-800 font-medium hover:underline">
+            Notícias
+          </Link>
+          <Link href="/roadmap" className="text-yellow-600 hover:text-yellow-800 font-medium hover:underline">
+            Futuro (Roadmap)
+          </Link>
+          <Link href="/contact" className="text-yellow-600 hover:text-yellow-800 font-medium hover:underline">
+            Contato
+          </Link>
+        </div>
+      </div>
+
       <div className="text-center mt-10">
         <Link
           href="/create"
-          className="py-2 px-6 bg-yellow-600 text-white font-semibold rounded-md hover:bg-yellow-700 transition-colors"
+          className="py-2 px-6 bg-yellow-600 text-white font-semibold rounded-md hover:bg-yellow-700 transition-colors inline-block"
         >
           Voltar para o Gerador
         </Link>

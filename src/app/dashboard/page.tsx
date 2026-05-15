@@ -60,7 +60,7 @@ export default function DashboardPage() {
   };
 
   const getShareLink = (quizId: string) =>
-    `${window.location.origin}/?quiz_id=${quizId}`;
+    `${window.location.origin}/create?quiz_id=${quizId}`;
 
   const handleDeleteQuiz = async (quizId: string) => {
     if (

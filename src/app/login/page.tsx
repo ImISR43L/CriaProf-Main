@@ -49,34 +49,56 @@ export default function LoginPage() {
           password,
         });
         if (error) {
-          setMessage(`Erro ao fazer login: ${error.message}`);
+          setMessage("E-mail ou senha inválidos.");
           setMessageType("error");
         } else {
-          router.push("/");
-          router.refresh();
+          router.push("/dashboard");
         }
       }
+    } catch (err) {
+      setMessage("Ocorreu um erro inesperado.");
+      setMessageType("error");
     } finally {
       setLoading(false);
     }
   };
 
+  // NOVA FUNÇÃO: Esqueci a Senha
+  const handleResetPassword = async () => {
+    if (!email) {
+      setMessage("Por favor, digite seu e-mail no campo acima para recuperar a senha.");
+      setMessageType("error");
+      return;
+    }
+    setLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    
+    if (error) {
+      setMessage(`Erro: ${error.message}`);
+      setMessageType("error");
+    } else {
+      setMessage("Instruções de recuperação enviadas para o seu e-mail!");
+      setMessageType("success");
+    }
+    setLoading(false);
+  };
+
   return (
-    <div className="flex justify-center items-center min-h-screen -mt-16">
-      <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-md border border-gray-200">
-        <h1 className="text-2xl font-bold text-center text-gray-900">
-          {isSignUp ? "Criar Nova Conta" : "Aceder à Conta"}
-        </h1>
-        <div className="space-y-4">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-lg border border-gray-100">
+        <div>
+          <h2 className="mt-2 text-center text-3xl font-extrabold text-gray-900">
+            {isSignUp ? "Crie sua conta" : "Acesse sua conta"}
+          </h2>
+        </div>
+        <div className="mt-8 space-y-4">
           <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Email
+            <label className="text-sm font-medium text-gray-700 block">
+              E-mail
             </label>
             <input
-              id="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -84,40 +106,45 @@ export default function LoginPage() {
               placeholder="seu@email.com"
             />
           </div>
-          <div className="relative">
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium text-gray-700"
-            >
+          <div>
+            <label className="text-sm font-medium text-gray-700 block">
               Senha
             </label>
-            <input
-              id="password"
-              type={showPassword ? "text" : "password"}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full p-2 mt-1 border border-gray-300 rounded-md bg-white text-gray-900 pr-10"
-              placeholder="••••••••"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute inset-y-0 right-0 top-6 flex items-center px-3 text-gray-500"
-              aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
-            >
-              {showPassword ? <EyeSlash /> : <Eye />}
-            </button>
+            <div className="relative mt-1">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-md pr-10 bg-white text-gray-900"
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700"
+              >
+                {showPassword ? <EyeSlash /> : <Eye />}
+              </button>
+            </div>
+            {/* NOVO BOTÃO: Link de esqueci a senha aparece apenas no modo Entrar */}
+            {!isSignUp && (
+              <div className="text-right mt-1">
+                <button
+                  type="button"
+                  onClick={handleResetPassword}
+                  className="text-xs text-yellow-600 hover:underline"
+                >
+                  Esqueceu a senha?
+                </button>
+              </div>
+            )}
           </div>
           {isSignUp && (
             <div>
-              <label
-                htmlFor="confirmPassword"
-                className="block text-sm font-medium text-gray-700"
-              >
+              <label className="text-sm font-medium text-gray-700 block">
                 Confirmar Senha
               </label>
               <input
-                id="confirmPassword"
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
@@ -130,26 +157,26 @@ export default function LoginPage() {
         <button
           onClick={handleAuthAction}
           disabled={loading}
-          className="w-full h-10 flex items-center justify-center py-2 px-4 bg-yellow-500 text-white font-semibold rounded-md hover:bg-yellow-600 transition-colors disabled:bg-yellow-300 disabled:cursor-not-allowed"
+          className="w-full h-10 flex items-center justify-center py-2 px-4 bg-yellow-500 text-white font-semibold rounded-md hover:bg-yellow-600 transition-colors disabled:bg-yellow-300 disabled:cursor-not-allowed mt-6"
         >
           {loading ? (
             <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
           ) : isSignUp ? (
-            "Registar"
+            "Registrar"
           ) : (
             "Entrar"
           )}
         </button>
         {message && (
           <p
-            className={`text-center text-base ${
+            className={`text-center text-base mt-4 ${
               messageType === "success" ? "text-green-600" : "text-red-500"
             }`}
           >
             {message}
           </p>
         )}
-        <p className="text-sm text-center text-gray-600">
+        <p className="text-sm text-center text-gray-600 mt-4">
           {isSignUp ? "Já tem uma conta?" : "Não tem uma conta?"}
           <button
             onClick={() => {
@@ -158,7 +185,7 @@ export default function LoginPage() {
             }}
             className="ml-1 font-semibold text-yellow-600 hover:underline"
           >
-            {isSignUp ? "Faça login" : "Registe-se"}
+            {isSignUp ? "Faça login" : "Cadastre-se"}
           </button>
         </p>
       </div>

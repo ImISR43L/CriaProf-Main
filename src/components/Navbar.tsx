@@ -44,7 +44,7 @@ const Navbar = () => {
                 </Link>
               </div>
             )}
-            {/* Links Públicos */}
+            {/* Links Públicos Limpos */}
             <Link
               href="/create"
               className="text-sm text-gray-600 hover:text-yellow-600"
@@ -64,28 +64,10 @@ const Navbar = () => {
               Comunidade
             </Link>
             <Link
-              href="/news"
-              className="text-sm text-gray-600 hover:text-yellow-600"
-            >
-              Notícias
-            </Link>{" "}
-            <Link
-              href="/roadmap"
-              className="text-sm text-gray-600 hover:text-yellow-600"
-            >
-              Futuro
-            </Link>{" "}
-            <Link
               href="/about"
               className="text-sm text-gray-600 hover:text-yellow-600"
             >
               Sobre
-            </Link>
-            <Link
-              href="/contact"
-              className="text-sm text-gray-600 hover:text-yellow-600"
-            >
-              Contato
             </Link>
           </div>
           <AuthButton />

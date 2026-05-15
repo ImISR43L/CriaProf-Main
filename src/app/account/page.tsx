@@ -9,6 +9,7 @@ export default function AccountPage() {
   const [loading, setLoading] = useState(true);
   const [fullName, setFullName] = useState("");
   const [message, setMessage] = useState("");
+  const [resetMessage, setResetMessage] = useState("");
   const router = useRouter();
 
   useEffect(() => {
@@ -44,6 +45,22 @@ export default function AccountPage() {
       setMessage(`Erro ao atualizar o perfil: ${error.message}`);
     } else {
       setMessage("Perfil atualizado com sucesso!");
+    }
+  };
+
+  // NOVA FUNÇÃO: Enviar link de redefinição de senha para quem já está logado
+  const handleSendResetEmail = async () => {
+    if (!user?.email) return;
+    setResetMessage("");
+    
+    const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+
+    if (error) {
+      setResetMessage(`Erro: ${error.message}`);
+    } else {
+      setResetMessage("E-mail para redefinir senha enviado! Verifique sua caixa de entrada.");
     }
   };
 
@@ -91,6 +108,22 @@ export default function AccountPage() {
         {message && (
           <p className="text-sm text-center text-green-600">{message}</p>
         )}
+
+        {/* NOVA SEÇÃO: Redefinir Senha */}
+        <div className="pt-6 mt-6 border-t border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-900 mb-2">Segurança</h2>
+          <button
+            onClick={handleSendResetEmail}
+            className="w-full py-2 px-4 bg-white border border-gray-300 text-gray-700 font-semibold rounded-md hover:bg-gray-50 transition-colors"
+          >
+            Receber link para mudar senha
+          </button>
+          {resetMessage && (
+            <p className="text-sm text-center mt-2 text-blue-600">
+              {resetMessage}
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );

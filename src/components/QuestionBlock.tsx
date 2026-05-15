@@ -166,7 +166,30 @@ const QuestionBlock = ({
   }
 
   return (
-    <div className="border border-gray-200 rounded-lg p-4 mb-4 relative bg-gray-50/50">
+<div 
+      onClick={() => {
+        if (!disabled) {
+          if (question.type === "single") {
+            const opt = question.options[0];
+            if (question.color && opt) {
+              setActiveTool({ answer: opt.answer, color: question.color });
+            }
+          } else if (question.type === "multiple") {
+            const correctOpt = question.options.find(o => o.id === question.correctOptionId);
+            const correctCol = question.optionColors?.[question.correctOptionId];
+            if (correctOpt && correctCol) {
+              setActiveTool({ answer: correctOpt.answer, color: correctCol });
+            }
+          }
+        }
+      }}
+      className={`rounded-lg p-4 mb-4 relative transition-all duration-200 ${
+        (question.type === "single" && activeTool?.answer === question.options[0]?.answer) ||
+        (question.type === "multiple" && activeTool?.answer === question.options.find(o => o.id === question.correctOptionId)?.answer)
+          ? "border-2 border-yellow-500 bg-yellow-50 shadow-md"
+          : "border border-gray-200 bg-gray-50/50 hover:border-gray-300"
+      } ${disabled ? "opacity-75 cursor-not-allowed" : "cursor-pointer"}`}
+    >
       <div className="flex items-center justify-between pb-3 mb-3 border-b">
         <div className="flex items-center gap-3">
           <span className="font-bold text-gray-500 text-sm">
@@ -315,18 +338,6 @@ const QuestionBlock = ({
                     onChange={(e) =>
                       handleTextChange("text", e.target.value, opt.id)
                     }
-                    // MUDANÇA CRÍTICA AQUI:
-                    // Ao clicar em qualquer input de texto, selecionamos a OPÇÃO CORRETA como pincel
-                    onClick={() => {
-                        if (!disabled) {
-                            const correctOpt = question.options.find(o => o.id === question.correctOptionId);
-                            const correctCol = question.optionColors?.[question.correctOptionId];
-                            
-                            if (correctOpt && correctCol) {
-                                setActiveTool({ answer: correctOpt.answer, color: correctCol });
-                            }
-                        }
-                    }}
                     readOnly={disabled}
                     className="w-full p-2 border border-gray-300 rounded-md text-sm focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 outline-none"
                   />
